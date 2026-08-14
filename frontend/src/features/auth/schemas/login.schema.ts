@@ -1,0 +1,11 @@
+import { z } from "zod";
+
+export const loginSchema = z.object({
+    email: z.string().email("Please enter a valid email address."),
+    password: z.string().min(1, "Password is required."),
+    rememberMe: z.boolean().optional(),
+});
+
+export const otpSchema = z.object({
+    otp: z.string().min(6, "OTP is required.").max(6, "OTP must be 6 digits."),
+});
