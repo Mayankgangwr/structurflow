@@ -1,0 +1,38 @@
+import { Request, Response } from 'express';
+import { asyncHandler } from "@/utils/asyncHandler";
+import { ApiErrors } from '@/utils/errors';
+import documentService from '@/services/document.service';
+import { ok } from '@/utils/response';
+import { string } from 'zod';
+export const documentController = {
+    upload: asyncHandler(async (req: Request, res: Response) => {
+        const file = req.file;
+        if (!file) throw ApiErrors.missingRequiredField('file');
+
+        const orgId = req.headers['x-organization-id'] as string;
+        const userId = req.user!._id;
+        const ip = req.ip || req.socket.remoteAddress;
+
+        const result = await documentService.uploadDocument(file, orgId, userId, ip);
+
+        return ok(res, result, "Document uploaded successfully", 201);
+    }),
+
+    list: asyncHandler(async (req: Request, res: Response) => {
+        const orgId = req.headers['x-organization-id'] as string;
+        const page = parseInt(req.query.page as string) || 1;
+
+        const document = await documentService.getDocumentsList(orgId, page);
+
+        return ok(res, document, "Documents fetched successfully");
+    }),
+
+    getOne: asyncHandler(async (req: Request, res: Response) => {
+        const orgId = req.headers['x-organization-id'] as string;
+        const docId = req.params.id as string;
+
+        const result = await documentService.getDocumentDetails(docId, orgId);
+
+        return ok(res, result, 'Document details fetched successfully');
+    })
+}

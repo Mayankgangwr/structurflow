@@ -1,29 +1,31 @@
-import { Membership, IMembership, Role } from '@/models/membership.model';
+import { MembershipModel, IMembership, Role } from '@/models/membership.model';
 import { ClientSession } from 'mongoose';
+import BaseRepository from './base.repository';
 
-export const MembershipRepository = {
-  create: async (data: Partial<IMembership>, session?: ClientSession) => {
-    const [membership] = await Membership.create([data], { session });
-    return membership;
-  },
+class MembershipRepository extends BaseRepository<IMembership> {
+  constructor() {
+    super(MembershipModel);
+  }
 
-  findByUserAndOrg: (userId: string, orgId: string) =>
-    Membership.findOne({ user: userId, organization: orgId }),
+  async findByUserAndOrg(userId: string, orgId: string) {
+    return await this.model.findOne({ userId, organizationId: orgId })
+  }
 
-  findAllByUser: async (userId: string) => {
-    return Membership.find({ userId })
-      .populate('organizationId')
-      .lean();
-  },
+  async findAllByUser(userId: string) {
+    return await this.model.find({ userId }).populate('organizationId').lean();
+  }
 
-  findAllByOrg: (orgId: string) =>
-    Membership.find({ organization: orgId }).populate('user', '-passwordHash'),
+  async findAllByOrg(orgId: string) {
+    return await this.model.find({ organizationId: orgId }).populate('user', '-passwordHash');
+  }
 
-  findByOrgAndUser: async (organizationId: string, userId: string) => {
-    return Membership.findOne({ organizationId, userId })
+  async findByOrgAndUser(organizationId: string, userId: string) {
+    return await this.model.findOne({ organizationId, userId })
       .populate('organizationId')
       .populate('userId')
       .lean();
-  },
+  }
+}
 
-};
+const membershipRepository = new MembershipRepository();
+export default membershipRepository;

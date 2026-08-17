@@ -15,4 +15,4 @@ const organizationSchema = new Schema<IOrganization>(
     { timestamps: true }
 );
 
-export const Organization = mongoose.model<IOrganization>('Organization', organizationSchema);
+export const OrganizationModel = mongoose.model<IOrganization>('Organization', organizationSchema);

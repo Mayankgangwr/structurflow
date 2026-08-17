@@ -1,6 +1,6 @@
-import { OrganizationRepository } from "@/repositories/organization.repository";
-import { UserRepository } from "@/repositories/user.repository";
-import { MembershipRepository } from "@/repositories/membership.repository";
+import organizationRepository from "@/repositories/organization.repository";
+import userRepository from "@/repositories/user.repository";
+import membershipRepository from "@/repositories/membership.repository";
 import { RegisterFormData } from "@/schemas/auth.schema";
 import { ApiErrors } from "@/utils/errors";
 import bcrypt from "bcrypt";
@@ -12,6 +12,7 @@ import { redis } from "@/config/redis";
 import { config } from "@/config/env";
 import { mailService } from "./mail.service";
 import crypto from "crypto";
+import { IDocument } from "@/models/document.model";
 
 type PendingUser = RegisterFormData & { otpCode: string, lastSentAt?: number };
 
@@ -19,14 +20,14 @@ class AuthService {
     private generateAuthResponse(user: any, memberships: any[]) {
         return {
             user: { id: user._id, email: user.email, firstName: user.firstName, lastName: user.lastName },
-            memberships: memberships.map((m) => ({ organizationId: m.organizationId, role: m.role })),
+            memberships: memberships.map((m) => ({ organizationId: m.organizationId?._id ? m.organizationId._id.toString() : m.organizationId.toString(), role: m.role })),
             accessToken: generateAccessToken({ userId: user._id.toString(), email: user.email }),
             refreshToken: generateRefreshToken({ userId: user._id.toString() })
         };
     }
 
     async register(payload: RegisterFormData) {
-        const emailTaken = await UserRepository.emailExists(payload.email);
+        const emailTaken = await userRepository.emailExists(payload.email);
         if (emailTaken) throw ApiErrors.emailAlreadyExists();
 
         const otpCode = generateOtp();
@@ -59,22 +60,18 @@ class AuthService {
         if (!pendingUser) throw ApiErrors.invalidToken();
         if (payload.otpCode !== pendingUser.otpCode) throw ApiErrors.invalidToken();
 
-        const emailTaken = await UserRepository.emailExists(pendingUser.email);
+        const emailTaken = await userRepository.emailExists(pendingUser.email);
         if (emailTaken) throw ApiErrors.emailAlreadyExists();
 
         const passwordHash = await bcrypt.hash(pendingUser.password, 12);
-        const session = await mongoose.startSession();
-
         try {
-            session.startTransaction();
-
-            const user = await UserRepository.create({
+            const user = await userRepository.create({
                 email: pendingUser.email,
                 passwordHash,
                 firstName: pendingUser.firstName,
                 lastName: pendingUser.lastName,
                 isEmailVerified: true
-            }, session);
+            });
 
             let organizationName = pendingUser.organizationName;
             let slug;
@@ -87,18 +84,16 @@ class AuthService {
                 slug = generateSlug(organizationName);
             }
 
-            const organization = await OrganizationRepository.create({
+            const organization = await organizationRepository.create({
                 name: organizationName,
                 slug,
-            }, session);
+            });
 
-            const membership = await MembershipRepository.create({
+            const membership = await membershipRepository.create({
                 userId: user._id,
                 organizationId: organization._id,
                 role: Role.OWNER,
-            }, session);
-
-            await session.commitTransaction();
+            });
 
             const authResponse = this.generateAuthResponse(user, [membership]);
             return {
@@ -106,33 +101,35 @@ class AuthService {
                 organization: { id: organization._id, name: organization.name }
             };
         } catch (error) {
-            if (session.inTransaction()) await session.abortTransaction();
             throw error;
-        } finally {
-            await session.endSession();
         }
     }
 
     async login(email: string, password: string) {
-        const user = await UserRepository.findByEmail(email);
+        const user = await userRepository.findByEmail(email);
         if (!user) throw ApiErrors.invalidCredentials();
 
         const isCorrectPassword = await bcrypt.compare(password, user.passwordHash);
         if (!isCorrectPassword) throw ApiErrors.invalidCredentials();
 
-        const memberships = await MembershipRepository.findAllByUser(user._id.toString());
+        const memberships = await membershipRepository.findAllByUser(user._id.toString());
         return this.generateAuthResponse(user, memberships);
     }
 
     async getMe(userId: string) {
-        const user = await UserRepository.findById(userId);
+        const user = await userRepository.findById(userId);
         if (!user) throw ApiErrors.invalidCredentials();
-        return user;
+
+        const memberships = await membershipRepository.findAllByUser(user._id.toString());
+        return {
+            user: { id: user._id, email: user.email, firstName: user.firstName, lastName: user.lastName },
+            memberships: memberships.map((m: any) => ({ organizationId: m.organizationId?._id ? m.organizationId._id.toString() : m.organizationId.toString(), role: m.role })),
+        };
     }
 
     async refreshToken(refreshToken: string) {
         const decoded = verifyRefreshToken(refreshToken);
-        const user = await UserRepository.findById(decoded.userId);
+        const user = await userRepository.findById(decoded.userId);
         if (!user) throw ApiErrors.invalidCredentials();
 
         const accessToken = generateAccessToken({ userId: user._id.toString(), email: user.email });
@@ -141,7 +138,7 @@ class AuthService {
     }
 
     async forgotPassword(email: string) {
-        const user = await UserRepository.findByEmail(email);
+        const user = await userRepository.findByEmail(email);
         if (!user) return; // Silent success for security
 
         const resetToken = crypto.randomBytes(32).toString('hex');
@@ -157,9 +154,24 @@ class AuthService {
         if (!userId) throw ApiErrors.invalidResetToken();
 
         const passwordHash = await bcrypt.hash(newPassword, 12);
-        await UserRepository.update(userId, { passwordHash });
+        await userRepository.updateById(userId, { passwordHash });
 
         await redis.del(`reset_password:${hashedToken}`);
+    }
+
+    async getInviteInfo(token: string) {
+        const inviteData = await redis.getJson(`org_invite:${token}`) as { email: string; organizationId: string; role: Role };
+        if (!inviteData) throw ApiErrors.invalidOrExpiredInvite();
+
+        const { email, organizationId } = inviteData;
+        const user = await userRepository.findByEmail(email);
+        const org = await organizationRepository.findById(organizationId);
+
+        return {
+            email,
+            isRegistered: !!user,
+            organizationName: org?.name || 'an organization'
+        };
     }
 
     async acceptInvite(token: string, payload: { firstName?: string, lastName?: string, password?: string }) {
@@ -167,46 +179,41 @@ class AuthService {
         if (!inviteData) throw ApiErrors.invalidOrExpiredInvite();
 
         const { email, organizationId, role } = inviteData;
-        let user = await UserRepository.findByEmail(email);
+        let user: any = await userRepository.findByEmail(email);
 
-        const session = await mongoose.startSession();
         try {
-            session.startTransaction();
-
             if (!user) {
                 if (!payload.firstName || !payload.password) {
                     throw ApiErrors.registrationDetailsRequired();
                 }
                 const passwordHash = await bcrypt.hash(payload.password, 12);
 
-                user = await UserRepository.create({
+                user = await userRepository.create({
                     email,
                     passwordHash,
                     firstName: payload.firstName,
                     lastName: payload.lastName || '',
                     isEmailVerified: true
-                }, session);
+                });
             }
 
-            const existingMembership = await MembershipRepository.findByUserAndOrg(user._id.toString(), organizationId);
+            if (!user) throw ApiErrors.userNotFound();
+
+            const existingMembership = await membershipRepository.findByUserAndOrg(user._id.toString(), organizationId);
             if (existingMembership) throw ApiErrors.duplicateMembership();
 
-            await MembershipRepository.create({
+            await membershipRepository.create({
                 userId: user._id,
                 organizationId: new mongoose.Types.ObjectId(organizationId),
                 role
-            }, session);
+            });
 
-            await session.commitTransaction();
             await redis.del(`org_invite:${token}`);
 
-            const memberships = await MembershipRepository.findAllByUser(user._id.toString());
+            const memberships = await membershipRepository.findAllByUser(user._id.toString());
             return this.generateAuthResponse(user, memberships);
         } catch (error) {
-            if (session.inTransaction()) await session.abortTransaction();
             throw error;
-        } finally {
-            await session.endSession();
         }
     }
 }

@@ -1,19 +1,47 @@
-import { Button } from "@/components/ui/button";
+'use client';
+
+import { FileUploadArea } from '@/features/documents/components/FileUploadArea';
+import { DocumentList } from '@/features/documents/components/DocumentList';
+import { Layers } from 'lucide-react';
+import { useAppSelector } from '@/store/hooks';
 
 const DashboardPage = () => {
-    return (
-        <div className="space-y-6">
-            <h2 className="text-2xl font-bold tracking-tight">Dashboard overview</h2>
+    const activeOrganizationId = useAppSelector((state) => state.auth.activeOrganizationId);
 
-            <div className="p-6 bg-white rounded-lg border border-slate-200">
-                <p className="text-slate-500 mb-4">
-                    Welcome to the StructurFlow dashboard This is the foundation.
+    if (!activeOrganizationId) return null;
+
+    return (
+        <div className="space-y-8">
+            {/* Header section */}
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                    Documents
+                </h1>
+                <p className="mt-2 text-zinc-500 dark:text-zinc-400">
+                    Upload and manage invoices, receipts, and forms for your organization.
                 </p>
-                <Button>Test Button Component</Button>
+            </div>
+
+            <div className="grid gap-8 lg:grid-cols-3">
+                {/* Main Content: Document List */}
+                <div className="lg:col-span-2 space-y-4">
+                    <div className="flex items-center gap-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                        <Layers className="h-5 w-5 text-indigo-500" />
+                        <h3>Recent Documents</h3>
+                    </div>
+                    <DocumentList orgId={activeOrganizationId} />
+                </div>
+
+                {/* Sidebar: Upload Area */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                        <h3>Upload New</h3>
+                    </div>
+                    <FileUploadArea orgId={activeOrganizationId} />
+                </div>
             </div>
         </div>
-    )
-
+    );
 }
 
 export default DashboardPage;

@@ -36,6 +36,9 @@ const envSchema = z.object({
 
     OTP_TTL_MINUTES: z.coerce.number().default(15),
     PENDING_SIGNUP_TTL_MINUTES: z.coerce.number().default(120),
+    CLOUDINARY_CLOUD_NAME: z.string(),
+    CLOUDINARY_API_KEY: z.string(),
+    CLOUDINARY_API_SECRET: z.string()
 });
 
 const _env = envSchema.safeParse(process.env);

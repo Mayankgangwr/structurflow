@@ -1,22 +1,29 @@
-import { User, IUser } from '@/models/user.model';
+import { UserModel, IUser } from '@/models/user.model';
 import { ClientSession } from 'mongoose';
+import BaseRepository from './base.repository';
 
-export const UserRepository = {
-  findByEmail: (email: string) => User.findOne({ email }),
+class UserRepository extends BaseRepository<IUser> {
+  constructor(){
+    super(UserModel)
+  }
 
-  findByEmailForAuth: (email: string) => User.findOne({ email }).select('+passwordHash'),
+  async findByEmail(email: string){
+    return await this.model.findOne({ email });
+  } 
 
-  findById: (id: string) => User.findById(id).select('-passwordHash'),
+  async findByEmailForAuth(email: string){
+    return await this.model.findOne({ email }).select('+passwordHash'); 
+  } 
 
-  create: async (data: Partial<IUser>, session?: ClientSession) => {
-    const [user] = await User.create([data], { session });
-    return user;
-  },
+  async findById(id: string){
+    return await this.model.findById(id).select('-passwordHash');
+  }
 
-  emailExists: async (email: string): Promise<boolean> => {
-    const user = await User.findOne({ email }).select('_id').lean();
+  async emailExists(email: string) {
+    const user = await this.model.findOne({ email }).select('_id').lean();
     return user !== null;
-  },
-
-  update: (id: string, data: Partial<IUser>) => User.findByIdAndUpdate(id, data, { new: true }),
+  }
 };
+
+const userRepository =  new UserRepository()
+export default userRepository;

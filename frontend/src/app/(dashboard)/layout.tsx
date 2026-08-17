@@ -1,4 +1,5 @@
 import React from "react";
+import AuthGuard from "@/features/auth/components/AuthGuard";
 
 const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return (
@@ -30,7 +31,9 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
                 {/* Page Content */}
                 <div className="p-6 flex-1 overflow-auto">
-                    {children}
+                    <AuthGuard>
+                        {children}
+                    </AuthGuard>
                 </div>
             </main>
         </div>

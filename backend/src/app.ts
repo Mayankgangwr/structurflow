@@ -11,6 +11,7 @@ import { globalErrorHandler, notFoundHandler } from "./middlewares/error.middlew
 import { success } from "zod";
 import authRoutes from "./routes/auth.routes";
 import teamRouter from "./routes/team.routes";
+import documentRoutes from "./routes/document.routes";
 
 const app = express();
 
@@ -35,6 +36,10 @@ app.use(morgan(':method :url :status :res[content-lenght] - :response-time ms - 
 // Rate Limiting
 app.use('/api', globalRateLimiter);
 
+// Serve static uploads (for bypassing Cloudinary restrictions locally)
+import path from "path";
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 // Setup Routes (Placeholder for now)
 app.get('/api/health', (req, res) => {
     res.status(200).json({ success: true, })
@@ -42,6 +47,7 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/invite', teamRouter)
+app.use('/api/v1/documents', documentRoutes);
 
 // Fallback & Error Handling
 app.use(notFoundHandler);

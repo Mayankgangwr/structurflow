@@ -9,7 +9,7 @@ export const teamController = {
         // Assuming your auth middleware attaches the user's active organizationId to req.headers or req.user
         const organizationId = req.headers['x-organization-id'] as string;
 
-        await teamService.inviateMamber(req.user!._id, organizationId, email, role);
+        await teamService.inviateMamber(req.user!._id, email, role, organizationId);
 
         return ok(res, null, 'Invitation sent successfully', 200);
     })

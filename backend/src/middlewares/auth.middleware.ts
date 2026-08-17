@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '@/utils/jwt';
-import { UserRepository } from '@/repositories/user.repository';
-import { MembershipRepository } from '@/repositories/membership.repository';
+import userRepository from '@/repositories/user.repository';
+import membershipRepository from '@/repositories/membership.repository';
 import { Role } from '@/models/membership.model';
 import { ApiErrors } from '@/utils/errors';
 
@@ -14,7 +14,7 @@ export const requireAuth = async (req: Request, _res: Response, next: NextFuncti
         if (!token) throw ApiErrors.unauthorized();
 
         const decoded = verifyAccessToken(token);
-        const user = await UserRepository.findById(decoded.userId);
+        const user = await userRepository.findById(decoded.userId);
         if (!user) throw ApiErrors.userNotFound();
 
         req.user = {
@@ -42,7 +42,7 @@ export const requireOrgAccess = (allowedRoles: Role[] = Object.values(Role)) => 
             const orgId = Array.isArray(rawOrgId) ? rawOrgId[0] : rawOrgId;
             if (!orgId) throw ApiErrors.orgIdRequired();
 
-            const membership = await MembershipRepository.findByUserAndOrg(req.user!._id, orgId);
+            const membership = await membershipRepository.findByUserAndOrg(req.user!._id, orgId);
             if (!membership) throw ApiErrors.membershipNotFound();
             if (!allowedRoles.includes(membership.role as Role)) throw ApiErrors.insufficientPermissions();
 

@@ -85,6 +85,12 @@ export const authController = {
         return ok(res, null, 'Password reset successful', 200);
     }),
 
+    getInviteInfo: asyncHandler(async (req: Request, res: Response) => {
+        const token = req.params.token as string;
+        const result = await authService.getInviteInfo(token);
+        return ok(res, result, 'Invite info fetched successfully', 200);
+    }),
+
     acceptInvite: asyncHandler(async (req: Request, res: Response) => {
         const result = await authService.acceptInvite(req.body.token, req.body);
         setAccessTokenCookie(res, result.accessToken);

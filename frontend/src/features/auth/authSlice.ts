@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { User, Membership } from './authApi';
+import { User, Membership, authApi } from './authApi';
 
 interface AuthState {
   user: User | null;
@@ -46,6 +46,23 @@ const authSlice = createSlice({
       state.activeOrganizationId = null;
       state.isAuthenticated = false;
     },
+  },
+  extraReducers: (builder) => {
+    builder.addMatcher(
+      authApi.endpoints.getMe.matchFulfilled,
+      (state, action) => {
+        if (action.payload.data) {
+          state.user = action.payload.data.user;
+          state.memberships = action.payload.data.memberships || [];
+          state.isAuthenticated = true;
+
+          // Auto-select the first organization if none is selected
+          if (!state.activeOrganizationId && state.memberships?.length > 0) {
+            state.activeOrganizationId = state.memberships[0].organizationId;
+          }
+        }
+      }
+    );
   },
 });
 

@@ -1,4 +1,3 @@
-import { logoutUser } from '@/features/auth/authSlice';
 import { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
@@ -23,7 +22,7 @@ export const baseQueryWithReAuth: BaseQueryFn<
             result = await baseQuery(args, api, extraOptions);
         } else {
             // Refresh failed (refresh token expired/missing). Force logout.
-            api.dispatch(logoutUser());
+            api.dispatch({ type: 'auth/logoutUser' });
             window.location.href = '/login';
         }
     }

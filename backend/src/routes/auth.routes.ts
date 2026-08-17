@@ -25,6 +25,7 @@ authRouter.post('/refresh', authController.refresh);
 authRouter.post('/forgot-password', validateRequest(forgotPasswordSchema), authController.forgotPassword);
 authRouter.post('/reset-password', validateRequest(resetPasswordSchema), authController.resetPassword);
 
+authRouter.get('/invite-info/:token', authController.getInviteInfo);
 authRouter.post('/accept-invite', authController.acceptInvite);
 
 export default authRouter;
