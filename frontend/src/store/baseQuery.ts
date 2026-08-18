@@ -16,12 +16,17 @@ export const baseQueryWithReAuth: BaseQueryFn<
 
     if (result.error && result.error.status === 401) {
         // Access token has expired, try to get a new one
-        const refreshResult = await baseQuery('/auth/refresh', api, extraOptions);
+        const refreshResult = await baseQuery(
+            { url: '/auth/refresh', method: 'POST' },
+            api,
+            extraOptions
+        );
         if (refreshResult.data) {
             // Refresh was successful. Retry the original query.
             result = await baseQuery(args, api, extraOptions);
         } else {
             // Refresh failed (refresh token expired/missing). Force logout.
+            await baseQuery({ url: '/auth/logout', method: 'POST' }, api, extraOptions);
             api.dispatch({ type: 'auth/logoutUser' });
             window.location.href = '/login';
         }

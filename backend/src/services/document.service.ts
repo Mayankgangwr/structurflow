@@ -33,8 +33,8 @@ class DocumentService {
         const extension = path.extname(file.originalname);
         const filename = `${uuidv4()}${extension}`;
 
-        // 4. Upload directly to Cloudinary
-        const uploadResult = await storageService.uploadFile(file.buffer, folder, filename);
+        // 4. Upload directly to Supabase Storage
+        const uploadResult = await storageService.uploadFile(file.buffer, folder, filename, file.mimetype);
 
         // 5. Persist Document and Audit Log (Without Transactions for standalone DB)
         try {

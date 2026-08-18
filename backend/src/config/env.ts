@@ -38,7 +38,11 @@ const envSchema = z.object({
     PENDING_SIGNUP_TTL_MINUTES: z.coerce.number().default(120),
     CLOUDINARY_CLOUD_NAME: z.string(),
     CLOUDINARY_API_KEY: z.string(),
-    CLOUDINARY_API_SECRET: z.string()
+    CLOUDINARY_API_SECRET: z.string(),
+
+    SUPABASE_URL: z.string(),
+    SUPABASE_PUBLISHABLE_KEY: z.string(),
+    SUPABASE_SECRET_KEY: z.string(),
 });
 
 const _env = envSchema.safeParse(process.env);
