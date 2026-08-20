@@ -28,3 +28,17 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+implementation_plan.md
+implementation_plan2.md
+phase1_setup_guide.md
+phase3_frontend_code_guide.md
+frontend/package-lock.json
+frontend/CLAUDE.md
+.gitignore
+phase3_backend_code_guide.md
+phase1_backend_code_guide.md
+frontend/AGENTS.md
+backend/package-lock.json
+frontend/package-lock.json
+frontend/package-lock.json
+structurflow_project_flow.md

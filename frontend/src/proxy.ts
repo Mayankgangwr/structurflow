@@ -6,7 +6,7 @@ const protectedPaths = ['/dashboard', '/settings'];
 // Add paths that authenticated users shouldn't see
 const authPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // We check for the refresh token cookie as the source of truth for "logged in" state

@@ -5,7 +5,7 @@ import { FileText, RefreshCw, AlertTriangle, CheckCircle, File, Eye, Upload, Fil
 
 export default function DashboardPage() {
     return (
-        <div className="p-4 md:p-8 flex-1 flex flex-col gap-6 max-w-[1440px] mx-auto w-full">
+        <div className="p-4 flex-1 flex flex-col gap-6 max-w-360 mx-auto w-full">
 
             {/* Welcome Section */}
             <section>

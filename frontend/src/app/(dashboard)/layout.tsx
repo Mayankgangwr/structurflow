@@ -2,25 +2,24 @@ import React from "react";
 import AuthGuard from "@/features/auth/components/AuthGuard";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
+import MobileBottomNav from "@/components/layout/MobileBottomNav";
 
 const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return (
         <div className="w-full flex min-h-screen bg-surface-container-lowest">
-            {/* Sidebar Placeholder */}
-            <div className="w-[20%] max-w-56 min-w-48 bg-surface relative">
-                <Sidebar children={undefined} />
-            </div>
+            <Sidebar />
 
             {/* Main Content */}
-            <main className="w-[80%] flex-1 flex flex-col min-h-screen relative overflow-hidden">
+            <main className="flex-1 flex flex-col min-h-screen relative overflow-hidden">
                 {/* Header Placeholder */}
                 <Topbar />
                 {/* Page Content */}
-                <div className="flex-1 overflow-auto bg-surface-bright">
+                <div className="flex-1 overflow-y-auto bg-surface-bright pb-16 xs:pb-0">
                     <AuthGuard>
                         {children}
                     </AuthGuard>
                 </div>
+                <MobileBottomNav />
             </main>
         </div>
     );
