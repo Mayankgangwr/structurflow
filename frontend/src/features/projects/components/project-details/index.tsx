@@ -30,7 +30,7 @@ const ProjectDetails: React.FC<IProjectDetailsProps> = ({ projectId }) => {
 
     const activeTemplate: Template | undefined = projectResponse.templateData;
     return (
-        <div className="p-2 xs:px-4 xs:py-4 pb-24 lg:pb-4 flex-1 flex flex-col gap-4 xs:gap-6 max-w-360 mx-auto w-full">
+        <div className="p-2 xs:px-4 xs:py-4 flex-1 flex flex-col gap-4 xs:gap-6 max-w-360 mx-auto w-full">
             <ProjectWelcomeSection project={projectResponse} />
             {activeTemplate ? (
                 <DocumentSection documentsResponse={documentsResponse} activeTemplate={activeTemplate} />
