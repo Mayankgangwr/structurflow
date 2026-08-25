@@ -1,16 +1,13 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useDispatch } from "react-redux";
 import { useAcceptInviteMutation } from "../authApi";
 import { useForm } from "react-hook-form";
 import { AcceptInviteFormData } from "../types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { acceptInviteSchema } from "../schemas/accept-invite.schema";
-import { setCredentials } from "../authSlice";
 
 export const useAcceptInvite = () => {
     const router = useRouter();
-    const dispatch = useDispatch();
     const [apiError, setApiError] = useState("");
     const [acceptInvite, { isLoading }] = useAcceptInviteMutation();
 
@@ -31,14 +28,11 @@ export const useAcceptInvite = () => {
 
     const handleAcceptInvite = async (token: string, data: AcceptInviteFormData) => {
         try {
-            const result = await acceptInvite({ token, ...data }).unwrap();
-            dispatch(setCredentials({
-                user: result.data.user,
-                memberships: result.data.memberships || []
-            }));
-            setTimeout(() => {
-                router.push("/dashboard");
-            }, 2000);
+            await acceptInvite({
+                token,
+                password: data.password,
+            }).unwrap();
+            router.push("/dashboard");
         } catch (error) {
             if (error instanceof Error) {
                 setApiError(error.message);

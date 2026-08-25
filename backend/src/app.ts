@@ -11,7 +11,9 @@ import { globalErrorHandler, notFoundHandler } from "./middlewares/error.middlew
 import { success } from "zod";
 import authRoutes from "./routes/auth.routes";
 import teamRouter from "./routes/team.routes";
+import projectRoutes from "./routes/project.routes";
 import documentRoutes from "./routes/document.routes";
+import templateRoutes from "./routes/template.routes";
 
 const app = express();
 
@@ -46,12 +48,13 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/invite', teamRouter)
+app.use('/api/v1/invite', teamRouter);
+app.use('/api/v1/projects', projectRoutes);
 app.use('/api/v1/documents', documentRoutes);
+app.use('/api/v1/templates', templateRoutes);
 
 // Fallback & Error Handling
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
 
 export default app;
-

@@ -7,6 +7,6 @@ export const baseApi = createApi({
     /**
      *  We will define tag types here later for cache invalidation (e.g. 'Documents')
      * */
-    tagTypes: ['Documents'],
+    tagTypes: ['Documents', 'Projects'],
     endpoints: () => ({}),
 });

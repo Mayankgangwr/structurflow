@@ -1,17 +1,14 @@
 import { useRouter } from "next/navigation"
-import { useDispatch } from "react-redux";
 import { useRegisterMutation } from "../authApi";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { RegisterFormData } from "../types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema } from "../schemas/register.schema";
-import { setCredentials } from "../authSlice";
 import { z } from "zod";
 
 export const useRegister = () => {
     const router = useRouter();
-    const dispatch = useDispatch();
     const [register, { isLoading }] = useRegisterMutation();
     const [apiError, setApiError] = useState("");
 
@@ -38,16 +35,7 @@ export const useRegister = () => {
     const onSubmit = async (payload: z.infer<typeof registerSchema>) => {
         setApiError("");
         try {
-            const result = await register(payload).unwrap();
-            const membership = {
-                role: 'OWNER',
-                organizationId: result.data.organization?.id || ''
-            };
-
-            dispatch(setCredentials({
-                user: result.data.user,
-                memberships: [membership as any]
-            }));
+            await register(payload).unwrap();
             router.push('/verify-email');
         } catch (err) {
             if (err instanceof Error) {

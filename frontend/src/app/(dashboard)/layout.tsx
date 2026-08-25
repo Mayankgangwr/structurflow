@@ -14,7 +14,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 {/* Header Placeholder */}
                 <Topbar />
                 {/* Page Content */}
-                <div className="flex-1 overflow-y-auto bg-surface-bright pb-16 xs:pb-0">
+                <div className="flex-1 overflow-y-auto bg-surface-bright pb-16 xs:pb-0 flex flex-col">
                     <AuthGuard>
                         {children}
                     </AuthGuard>

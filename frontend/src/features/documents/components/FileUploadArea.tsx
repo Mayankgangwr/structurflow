@@ -7,9 +7,11 @@ import { toast } from 'sonner';
 
 interface FileUploadAreaProps {
   orgId: string;
+  projectId: string;
+  documentType?: "TEMPLATE" | "RAW";
 }
 
-export const FileUploadArea = ({ orgId }: FileUploadAreaProps) => {
+export const FileUploadArea = ({ orgId, projectId, documentType = "RAW" }: FileUploadAreaProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadDocument] = useUploadDocumentMutation();
   const [isUploading, setIsUploading] = useState(false);
@@ -37,7 +39,7 @@ export const FileUploadArea = ({ orgId }: FileUploadAreaProps) => {
 
     setIsUploading(true);
     try {
-      const res = await uploadDocument({ orgId, file }).unwrap();
+      const res = await uploadDocument({ orgId, projectId, documentType, file }).unwrap();
       if (res.data.warnings?.length > 0) {
         toast.warning(res.data.warnings[0]);
       } else {

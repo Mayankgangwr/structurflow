@@ -1,10 +1,20 @@
 import { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
+import { RootState } from '@/store';
+
 const baseQuery = fetchBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1",
     // credentials: 'include' is critical to send the secure cookies automatically
     credentials: 'include',
+    prepareHeaders: (headers, { getState }) => {
+        const state = getState() as RootState;
+        const orgId = state.auth.activeOrganizationId;
+        if (orgId) {
+            headers.set('X-Organization-Id', orgId);
+        }
+        return headers;
+    },
 });
 
 export const baseQueryWithReAuth: BaseQueryFn<

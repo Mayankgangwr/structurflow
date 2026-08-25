@@ -5,12 +5,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { otpSchema } from "../schemas/login.schema";
 import { type OtpFormData } from "../types";
 import { useVerifyOTPMutation } from "../authApi";
-import { setCredentials } from "../authSlice";
-import { useDispatch } from "react-redux";
 
 export const useVerifyOTP = (defaultOtp: string = "") => {
     const router = useRouter();
-    const dispatch = useDispatch();
     const [verifyOTP, { isLoading }] = useVerifyOTPMutation();
     const [apiError, setApiError] = useState("");
     const [isSuccess, setIsSuccess] = useState(false);
@@ -28,11 +25,7 @@ export const useVerifyOTP = (defaultOtp: string = "") => {
     const handleVerify = async (data: OtpFormData, token: string) => {
         setApiError("");
         try {
-            const result = await verifyOTP({ ...data, token }).unwrap();
-            dispatch(setCredentials({
-                user: result.data.user,
-                memberships: result.data.memberships || []
-            }));
+            await verifyOTP({ ...data, token }).unwrap();
             
             setIsSuccess(true);
             

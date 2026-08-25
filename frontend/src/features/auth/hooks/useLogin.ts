@@ -5,12 +5,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema } from "../schemas/login.schema";
 import { type LoginFormData } from "../types";
 import { useLoginMutation } from "../authApi";
-import { setCredentials } from "../authSlice";
-import { useDispatch } from "react-redux";
 
 export const useLogin = () => {
     const router = useRouter();
-    const dispatch = useDispatch();
     const [login, { isLoading }] = useLoginMutation();
     const [apiError, setApiError] = useState("");
 
@@ -29,11 +26,7 @@ export const useLogin = () => {
     const onSubmit = async (data: LoginFormData) => {
         setApiError("");
         try {
-            const result = await login(data).unwrap();
-            dispatch(setCredentials({
-                user: result.data.user,
-                memberships: result.data.memberships || []
-            }));
+            await login(data).unwrap();
             router.push("/dashboard");
         } catch (error) {
             if (error instanceof Error) {

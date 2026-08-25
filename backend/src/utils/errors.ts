@@ -67,8 +67,16 @@ export const ApiErrors = {
     // --- Documents ---
     documentNotFound: () => new EntityNotFoundError('Document not found', [{ code: 'DOCUMENT_NOT_FOUND', message: 'The requested document does not exist in this organization.' }]),
     invalidFileType: (mimeType: string) => new ValidationError('Invalid file type', [{ code: 'INVALID_FILE_TYPE', message: `Files of type ${mimeType} are not supported. Please upload PDF, PNG, or JPEG.` }]),
+    invalidDocumentType: () => new ValidationError('Invalid document type', [{ code: 'INVALID_DOCUMENT_TYPE', message: 'Invalid or missing documentType. Must be TEMPLATE or RAW.' }]),
     fileTooLarge: (maxSizeMB: number) => new ValidationError('File too large', [{ code: 'FILE_TOO_LARGE', message: `The uploaded file exceeds the maximum allowed size of ${maxSizeMB}MB.` }]),
     uploadFailed: () => new InternalError('File upload failed', [{ code: 'UPLOAD_FAILED', message: 'An error occurred while uploading the file to storage.' }]),
+
+     // --- Projects ---
+    //  prjectIdRequired: () => new ValidationError(),
+    projectNotFound: () => new EntityNotFoundError('Project not found', [{ code: 'PROJECT_NOT_FOUND', message: 'The requested project does not exist.' }]),
+
+    // --- Templates ---
+    templateNotFound: () => new EntityNotFoundError('Template not found', [{ code: 'TEMPLATE_NOT_FOUND', message: 'The requested template does not exist or does not belong to this project.' }]),
 
     // --- Generic ---
     missingRequiredField: (field: string) => new ValidationError(`${field} is required`, [{ field, code: 'REQUIRED_FIELD', message: `${field} is required.` }]),

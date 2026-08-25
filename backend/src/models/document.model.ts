@@ -11,7 +11,9 @@ export enum DocumentStatus {
 
 export interface IDocument extends MongooseDocument {
     organizationId: mongoose.Types.ObjectId;
-    uploadedById: mongoose.Types.ObjectId
+    projectId: mongoose.Types.ObjectId;
+    uploadedById: mongoose.Types.ObjectId;
+    documentType: 'TEMPLATE' | 'RAW' | 'TRANSFORMED';
 
     // Original File Metadata
     originalFileName: string;
@@ -28,6 +30,8 @@ export interface IDocument extends MongooseDocument {
     processingProgress?: any; // To be expanded in Phase 4
     extractedData?: any;      // To be expanded in Phase 5
 
+    isDeleted: boolean;
+
     createdAt: Date;
     updatedAt: Date;
 }
@@ -40,10 +44,22 @@ const documentSchema = new Schema<IDocument>(
             required: true,
             index: true
         },
+        projectId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Project',
+            required: true,
+            index: true
+        },
         uploadedById: {
             type: Schema.Types.ObjectId,
             ref: 'User',
             required: true
+        },
+        documentType: {
+            type: String,
+            enum: ['TEMPLATE', 'RAW', 'TRANSFORMED'],
+            required: true,
+            default: 'RAW'
         },
 
         originalFileName: {
@@ -80,7 +96,9 @@ const documentSchema = new Schema<IDocument>(
         },
 
         processingProgress: { type: Schema.Types.Mixed },
-        extractedData: { type: Schema.Types.Mixed }
+        extractedData: { type: Schema.Types.Mixed },
+
+        isDeleted: { type: Boolean, default: false }
     },
     {
         timestamps: true,

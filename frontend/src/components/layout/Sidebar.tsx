@@ -1,16 +1,22 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { LayoutDashboard, FileText, UploadCloud, ClipboardCheck, Download, BarChart2, Settings, CircleHelp, Plus, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { LayoutDashboard, Folder, FileText, UploadCloud, ClipboardCheck, Download, BarChart2, Settings, CircleHelp, Plus, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "../ui/button";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import ProjectForm from "../../features/projects/components/ProjectForm";
 
 interface SidebarProps {
     children?: React.ReactNode;
 }
 
 const Sidebar: React.FC<SidebarProps> = () => {
+    const pathname = usePathname();
+    const pathName = pathname.split("/")[1];
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isTablet, setIsTablet] = useState(false);
+    const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
 
     useEffect(() => {
         const getMode = (width: number) => {
@@ -74,6 +80,7 @@ const Sidebar: React.FC<SidebarProps> = () => {
             <Button
                 className={`bg-primary !text-white hover:!text-white mb-md font-label-md hover:bg-primary-container transition-colors shrink-0 ${isCollapsed ? "w-9 h-9 rounded-sm p-0 mx-auto flex items-center justify-center" : "w-full rounded-md py-2 px-4 text-label-md"}`}
                 title={isCollapsed ? "New Project" : undefined}
+                onClick={() => setIsProjectFormOpen(true)}
             >
                 {isCollapsed ? <Plus className="h-5 w-5" /> : "New Project"}
             </Button>
@@ -81,7 +88,8 @@ const Sidebar: React.FC<SidebarProps> = () => {
             <div className="flex h-full w-full flex-col items-start justify-between">
                 {/* Top Navigation */}
                 <nav className="space-y-0.5 w-full flex flex-col items-center">
-                    <NavItem icon={<LayoutDashboard />} label="Dashboard" isActive isCollapsed={isCollapsed} />
+                    <NavItem icon={<LayoutDashboard />} label="Dashboard" isActive={pathName === 'dashboard'} path='/dashboard' isCollapsed={isCollapsed} />
+                    <NavItem icon={<Folder />} label="Projects" isActive={pathName === 'project'} path='/project' isCollapsed={isCollapsed} />
                     <NavItem icon={<FileText />} label="Documents" isCollapsed={isCollapsed} />
                     <NavItem icon={<UploadCloud />} label="Upload" isCollapsed={isCollapsed} />
                     <NavItem icon={<ClipboardCheck />} label="Verification" isCollapsed={isCollapsed} />
@@ -128,14 +136,15 @@ const Sidebar: React.FC<SidebarProps> = () => {
                     </div>
                 </div>
             </div>
+            <ProjectForm isOpen={isProjectFormOpen} onClose={() => setIsProjectFormOpen(false)} />
         </div>
     );
 };
 
-const NavItem = ({ icon, label, isActive = false, isCollapsed }: { icon: React.ReactNode, label: string, isActive?: boolean, isCollapsed: boolean }) => {
+const NavItem = ({ icon, label, isActive = false, path = '#', isCollapsed }: { icon: React.ReactNode, label: string, isActive?: boolean, path?: string, isCollapsed: boolean }) => {
     return (
-        <a
-            href="#"
+        <Link
+            href={path}
             title={isCollapsed ? label : undefined}
             className={`group w-full flex items-center rounded-md font-label-md text-label-md transition-colors duration-200 ${isCollapsed ? "justify-center px-0 py-2" : "gap-3 px-2 py-1.5"} ${isActive ? "bg-surface-container-low text-primary font-bold" : "text-secondary hover:bg-surface-container-low hover:text-primary"}`}
         >
@@ -143,7 +152,7 @@ const NavItem = ({ icon, label, isActive = false, isCollapsed }: { icon: React.R
                 {icon}
             </div>
             {!isCollapsed && <span className="truncate">{label}</span>}
-        </a>
+        </Link>
     )
 }
 

@@ -3,6 +3,7 @@ import { AuditAction } from "@/models/audit-log.model";
 import { DocumentStatus } from "@/models/document.model";
 import auditLogRepository from "@/repositories/audit-log.repository";
 import documentRepository from "@/repositories/document.repository";
+import projectRepository from "@/repositories/project.repository";
 import { ApiErrors, DomainError } from "@/utils/errors";
 import crypto from "crypto";
 import path from "path";
@@ -17,7 +18,9 @@ class DocumentService {
     async uploadDocument(
         file: Express.Multer.File,
         organizationId: string,
+        projectId: string,
         userId: string,
+        documentType: 'TEMPLATE' | 'RAW' | 'TRANSFORMED',
         ipAddress?: string
     ) {
         // 1. Calculate SHA-256 hash of the file buffer
@@ -40,7 +43,9 @@ class DocumentService {
         try {
             const document = await documentRepository.create({
                 organizationId: new mongoose.Types.ObjectId(organizationId),
+                projectId: new mongoose.Types.ObjectId(projectId),
                 uploadedById: new mongoose.Types.ObjectId(userId),
+                documentType,
                 originalFileName: file.originalname,
                 mimeType: file.mimetype,
                 sizeBytes: file.size,
@@ -49,6 +54,10 @@ class DocumentService {
                 secureUrl: uploadResult.secure_url,
                 status: DocumentStatus.UPLOADED,
             });
+
+            if (documentType === 'TEMPLATE') {
+                await projectRepository.updateTemplate(projectId, document._id as mongoose.Types.ObjectId);
+            }
 
             await auditLogRepository.create({
                 organizationId: new mongoose.Types.ObjectId(organizationId),
@@ -89,6 +98,34 @@ class DocumentService {
         const auditTrail = await auditLogRepository.findByDocument(documentId);
 
         return { document, auditTrail }
+    }
+
+    async deleteDocument(documentId: string, organizationId: string, userId: string) {
+        const document = await documentRepository.findByIdAndOrg(documentId, organizationId);
+        if (!document) throw ApiErrors.documentNotFound();
+
+        await documentRepository.softDeleteById(documentId);
+
+        // If it was a template, check if it was the active one on the project
+        if (document.documentType === 'TEMPLATE') {
+            const project = await projectRepository.findByIdAndOrg(document.projectId.toString(), organizationId);
+            if (project && project.templateDocumentId && project.templateDocumentId.toString() === documentId) {
+                // If it was the active template, nullify it (user will have to select a new one)
+                await projectRepository.updateTemplate(project._id.toString(), null as any);
+            }
+        }
+
+        await auditLogRepository.create({
+            organizationId: new mongoose.Types.ObjectId(organizationId),
+            actorId: new mongoose.Types.ObjectId(userId),
+            documentId: document._id as mongoose.Types.ObjectId,
+            action: AuditAction.DOCUMENT_DELETED,
+            details: {
+                filename: document.originalFileName
+            }
+        });
+
+        return { success: true };
     }
 }
 

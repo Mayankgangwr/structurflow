@@ -10,10 +10,17 @@ export const documentController = {
         if (!file) throw ApiErrors.missingRequiredField('file');
 
         const orgId = req.headers['x-organization-id'] as string;
+        const { projectId, documentType } = req.body;
+        
+        if (!projectId) throw ApiErrors.missingRequiredField('projectId');
+        if (!documentType || !['TEMPLATE', 'RAW'].includes(documentType)) {
+            throw ApiErrors.invalidDocumentType();
+        }
+
         const userId = req.user!._id;
         const ip = req.ip || req.socket.remoteAddress;
 
-        const result = await documentService.uploadDocument(file, orgId, userId, ip);
+        const result = await documentService.uploadDocument(file, orgId, projectId, userId, documentType, ip);
 
         return ok(res, result, "Document uploaded successfully", 201);
     }),

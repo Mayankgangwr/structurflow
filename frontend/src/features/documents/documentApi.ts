@@ -39,10 +39,12 @@ export const documentApi = baseApi.injectEndpoints({
         }),
 
         uploadDocument: builder.mutation<{ success: boolean; data: { document: Document; warnings: string[] } },
-            { orgId: string; file: File }>({
-                query: ({ orgId, file }) => {
+            { orgId: string; projectId: string; documentType: 'TEMPLATE' | 'RAW'; file: File }>({
+                query: ({ orgId, projectId, documentType, file }) => {
                     const formData = new FormData();
                     formData.append('file', file);
+                    formData.append('projectId', projectId);
+                    formData.append('documentType', documentType);
                     return {
                         url: '/documents',
                         method: 'POST',
@@ -50,7 +52,7 @@ export const documentApi = baseApi.injectEndpoints({
                         body: formData,
                     };
                 },
-                invalidatesTags: ['Documents'], // Refreshes the list automatically
+                invalidatesTags: ['Documents', 'Projects'], // Refreshes both lists
             }),
     }),
 });
