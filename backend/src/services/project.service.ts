@@ -18,7 +18,7 @@ class ProjectService {
     }
 
     async getById(id: string) {
-        const project = await projectRepository.findById(id);
+        const project = await projectRepository.findByIdWithTemplate(id);
         if (!project) throw ApiErrors.projectNotFound();
         return project;
     }

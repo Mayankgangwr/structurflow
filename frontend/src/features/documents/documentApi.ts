@@ -19,23 +19,22 @@ export interface DocumentDetailResponse {
 
 export const documentApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        getDocuments: builder.query<{ success: boolean; data: Document[] }, { orgId: string; page?: number }>({
-            query: ({ orgId, page = 1 }) => ({
-                url: '/documents',
+        getDocuments: builder.query<{ success: boolean; data: Document[] }, { page?: number, limit?: number }>({
+            query: ({ page = 1, limit = 10 }) => ({
+                url: `/documents?page=${page}&limit=${limit}`,
                 method: 'GET',
-                headers: { 'X-Organization-Id': orgId },
-                params: { page },
             }),
             providesTags: ['Documents'],
         }),
 
-        getDocumentById: builder.query<{ success: boolean; data: DocumentDetailResponse }, { orgId: string; docId: string }>({
-            query: ({ orgId, docId }) => ({
+        getDocumentById: builder.query<{ success: boolean; data: DocumentDetailResponse }, string>({
+            query: (docId) => ({
                 url: `/documents/${docId}`,
                 method: 'GET',
-                headers: { 'X-Organization-Id': orgId },
             }),
-            providesTags: (result, error, arg) => [{ type: 'Documents', id: arg.docId }],
+            providesTags: (result, error, docId) => [
+                { type: 'Documents', id: docId },
+            ],
         }),
 
         uploadDocument: builder.mutation<{ success: boolean; data: { document: Document; warnings: string[] } },

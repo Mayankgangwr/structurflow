@@ -34,7 +34,8 @@ export const projectController = {
             processing: 0,
             needsVerification: 0,
             successRate: 0,
-            lastActivity: formatRelativeTime(p.updatedAt.toISOString())
+            lastActivity: formatRelativeTime(p.updatedAt.toISOString()),
+            activeTemplateId: p.templateDocumentId ? p.templateDocumentId.toString() : null
         }));
 
         return ok(res, formattedProjects, "Projects fetched successfully");
@@ -54,7 +55,9 @@ export const projectController = {
             processing: 0,
             needsVerification: 0,
             successRate: 0,
-            lastActivity: formatRelativeTime(p.updatedAt.toISOString())
+            lastActivity: formatRelativeTime(p.updatedAt.toISOString()),
+            activeTemplateId: p.templateDocumentId ? (p.templateDocumentId as any)._id?.toString() || p.templateDocumentId.toString() : null,
+            templateData: p.templateDocumentId && (p.templateDocumentId as any)._id ? p.templateDocumentId : null
         };
 
         return ok(res, formattedProject, "Project fetched successfully");

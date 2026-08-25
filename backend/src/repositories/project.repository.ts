@@ -15,6 +15,10 @@ class ProjectRepository extends BaseRepository<IProject> {
         return await this.model.findOne({ _id: projectId, organizationId, isDeleted: { $ne: true } });
     }
 
+    async findByIdWithTemplate(projectId: string) {
+        return await this.model.findOne({ _id: projectId, isDeleted: { $ne: true } }).populate('templateDocumentId');
+    }
+
     async softDelete(projectId: string) {
         return await this.model.findByIdAndUpdate(
             projectId,

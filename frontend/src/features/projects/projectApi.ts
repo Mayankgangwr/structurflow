@@ -11,6 +11,8 @@ export interface Project {
     needsVerification: number;
     successRate: number;
     lastActivity: string;
+    activeTemplateId?: string | null;
+    templateData?: any | null;
 }
 
 export const projectApi = baseApi.injectEndpoints({

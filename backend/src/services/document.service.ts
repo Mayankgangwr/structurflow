@@ -87,9 +87,10 @@ class DocumentService {
         }
     }
 
-    async getDocumentsList(organizationId: string, page = 1, limit = 50) {
+    async getDocumentsList(projectId: string, page = 1, limit = 50, docType: 'TEMPLATE' | 'DOC' = "DOC") {
         const skip = (page - 1) * limit;
-        return await documentRepository.findAllByOrg(organizationId, limit, skip);
+
+        return await documentRepository.findAllByProject(projectId, limit, skip, docType);
     }
 
     async getDocumentDetails(documentId: string, organizationId: string) {

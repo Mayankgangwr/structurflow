@@ -11,7 +11,7 @@ export const documentController = {
 
         const orgId = req.headers['x-organization-id'] as string;
         const { projectId, documentType } = req.body;
-        
+
         if (!projectId) throw ApiErrors.missingRequiredField('projectId');
         if (!documentType || !['TEMPLATE', 'RAW'].includes(documentType)) {
             throw ApiErrors.invalidDocumentType();
@@ -26,11 +26,11 @@ export const documentController = {
     }),
 
     list: asyncHandler(async (req: Request, res: Response) => {
-        const orgId = req.headers['x-organization-id'] as string;
         const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 50;
+        const projectId = req.params.projectId as string;
 
-        const document = await documentService.getDocumentsList(orgId, page);
-
+        const document = await documentService.getDocumentsList(projectId, page, limit, "DOC");
         return ok(res, document, "Documents fetched successfully");
     }),
 
