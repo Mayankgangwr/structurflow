@@ -46,8 +46,8 @@ export const documentApi = baseApi.injectEndpoints({
         }),
 
         uploadDocument: builder.mutation<{ success: boolean; data: { document: Document; warnings: string[] } },
-            { orgId: string; projectId: string; documentType: 'TEMPLATE' | 'RAW'; file: File }>({
-                query: ({ orgId, projectId, documentType, file }) => {
+            { projectId: string; file: File; documentType: 'TEMPLATE' | 'RAW'; }>({
+                query: ({ projectId, file, documentType }) => {
                     const formData = new FormData();
                     formData.append('file', file);
                     formData.append('projectId', projectId);
@@ -55,7 +55,6 @@ export const documentApi = baseApi.injectEndpoints({
                     return {
                         url: '/documents',
                         method: 'POST',
-                        headers: { 'X-Organization-Id': orgId },
                         body: formData,
                     };
                 },

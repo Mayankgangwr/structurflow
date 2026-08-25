@@ -6,6 +6,7 @@ import UploadDocument from "./UploadDocument";
 import DocumentEmptyState from "./DocumentEmptyState";
 import { Document } from "@/features/documents/documentApi";
 import DocumentsSummary from "./DocumentsSummary";
+import DocumentView from "./DocumentView";
 
 export interface IDocumentSectionProps {
     activeTemplate: Template;
@@ -22,7 +23,7 @@ const DocumentSection: React.FC<IDocumentSectionProps> = ({ activeTemplate, docu
         <div className="flex-1 flex flex-col lg:grid lg:grid-cols-3 gap-md lg:gap-xl mt-2 lg:mt-0 lg:min-h-100 h-full">
             <div className="lg:col-span-2 flex flex-col gap-sm order-2 lg:order-1 flex-1 lg:flex-none">
                 {documentsResponse.length > 0 ? (
-                    <div></div>
+                    <DocumentView documents={documentsResponse} />
                 ) : (
                     <UploadDocument projectId={activeTemplate.projectId} />
                 )}
