@@ -5,6 +5,7 @@ import { formatDate, formatSize, getFileType } from "@/lib/utils";
 import UploadDocument from "./UploadDocument";
 import DocumentEmptyState from "./DocumentEmptyState";
 import { Document } from "@/features/documents/documentApi";
+import DocumentsSummary from "./DocumentsSummary";
 
 export interface IDocumentSectionProps {
     activeTemplate: Template;
@@ -73,11 +74,7 @@ const DocumentSection: React.FC<IDocumentSectionProps> = ({ activeTemplate, docu
                         </div>
                     </div>
                 </>
-                <>
-                    <h2 className="font-headline-md text-headline-md text-text-primary">Documents Summary</h2>
-                    <div className="bg-surface border border-border-subtle rounded-xl p-md flex flex-col gap-sm hover:border-primary/30 transition-colors shadow-sm">
-                    </div>
-                </>
+                <DocumentsSummary projectId={activeTemplate.projectId} />
             </div>
         </div >
     )

@@ -38,6 +38,42 @@ class DocumentRepository extends BaseRepository<IDocument> {
     async softDeleteById(documentId: string) {
         return await this.model.findByIdAndUpdate(documentId, { isDeleted: true }, { new: true });
     }
+
+    async getSummaryByProject(projectId: string) {
+        const stats = await this.model.aggregate([
+            {
+                $match: {
+                    projectId: new mongoose.Types.ObjectId(projectId),
+                    documentType: { $ne: 'TEMPLATE' },
+                    isDeleted: { $ne: true }
+                }
+            },
+            {
+                $group: {
+                    _id: "$status",
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const summary = {
+            TOTAL: 0,
+            UPLOADED: 0,
+            TRANSFORMED: 0,
+            VERIFIED: 0,
+            REJECTED: 0,
+            EXPORTED: 0
+        };
+
+        stats.forEach(stat => {
+            if (stat._id in summary) {
+                summary[stat._id as keyof typeof summary] = stat.count;
+            }
+            summary.TOTAL += stat.count;
+        });
+
+        return summary;
+    }
 }
 
 const documentRepository = new DocumentRepository();

@@ -2,11 +2,10 @@ import mongoose, { Schema, Document as MongooseDocument } from "mongoose";
 
 export enum DocumentStatus {
     UPLOADED = 'UPLOADED',
-    PROCESSING = 'PROCESSING',
-    REVIEW_REQUIRED = 'REVIEW_REQUIRED',
-    TRUSTED = 'TRUSTED',
+    TRANSFORMED = 'TRANSFORMED',
+    VERIFIED = 'VERIFIED',
     REJECTED = 'REJECTED',
-    FAILED = 'FAILED'
+    EXPORTED = 'EXPORTED'
 }
 
 export interface IDocument extends MongooseDocument {

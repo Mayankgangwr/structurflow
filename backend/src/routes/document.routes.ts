@@ -11,7 +11,8 @@ documentRoutes.use(requireAuth);
 // Note: uploadMiddleware.single('file') handles parsing the multipart form data
 documentRoutes.post('/', uploadMiddleware.single('file'), documentController.upload);
 
-documentRoutes.get('/', documentController.list);
-documentRoutes.get("/:id", documentController.getOne);
+documentRoutes.get('/summary/:projectId', documentController.summary);
+documentRoutes.get('/detail/:id', documentController.getOne);
+documentRoutes.get('/:projectId', documentController.list);
 
 export default documentRoutes;

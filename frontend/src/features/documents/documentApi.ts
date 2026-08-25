@@ -19,9 +19,17 @@ export interface DocumentDetailResponse {
 
 export const documentApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        getDocuments: builder.query<{ success: boolean; data: Document[] }, { page?: number, limit?: number }>({
-            query: ({ page = 1, limit = 10 }) => ({
-                url: `/documents?page=${page}&limit=${limit}`,
+        getDocuments: builder.query<{ success: boolean; data: Document[] }, { projectId: string, page?: number, limit?: number }>({
+            query: ({ projectId, page = 1, limit = 10 }) => ({
+                url: `/documents/${projectId}?page=${page}&limit=${limit}`,
+                method: 'GET',
+            }),
+            providesTags: ['Documents'],
+        }),
+
+        getDocumentsSummary: builder.query<{ success: boolean; data: { TOTAL: number, UPLOADED: number, TRANSFORMED: number, VERIFIED: number, REJECTED: number, EXPORTED: number } }, { projectId: string }>({
+            query: ({ projectId }) => ({
+                url: `/documents/summary/${projectId}`,
                 method: 'GET',
             }),
             providesTags: ['Documents'],
@@ -29,7 +37,7 @@ export const documentApi = baseApi.injectEndpoints({
 
         getDocumentById: builder.query<{ success: boolean; data: DocumentDetailResponse }, string>({
             query: (docId) => ({
-                url: `/documents/${docId}`,
+                url: `/documents/detail/${docId}`,
                 method: 'GET',
             }),
             providesTags: (result, error, docId) => [
@@ -58,6 +66,7 @@ export const documentApi = baseApi.injectEndpoints({
 
 export const {
     useGetDocumentsQuery,
+    useGetDocumentsSummaryQuery,
     useGetDocumentByIdQuery,
     useUploadDocumentMutation
 } = documentApi;

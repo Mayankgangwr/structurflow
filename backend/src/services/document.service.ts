@@ -128,6 +128,10 @@ class DocumentService {
 
         return { success: true };
     }
+
+    async getDocumentSummary(projectId: string) {
+        return await documentRepository.getSummaryByProject(projectId);
+    }
 }
 
 const documentService = new DocumentService();

@@ -15,7 +15,7 @@ interface IProjectDetailsProps {
 
 const ProjectDetails: React.FC<IProjectDetailsProps> = ({ projectId }) => {
     const { data, isLoading } = useGetProjectByIdQuery(projectId);
-    const { data: documentsData, isLoading: isDocumentloading } = useGetDocumentsQuery({});
+    const { data: documentsData, isLoading: isDocumentloading } = useGetDocumentsQuery({ projectId });
 
     const projectResponse = data?.data;
     const documentsResponse = documentsData?.data;
@@ -33,7 +33,7 @@ const ProjectDetails: React.FC<IProjectDetailsProps> = ({ projectId }) => {
         <div className="p-2 xs:px-4 xs:py-4 flex-1 flex flex-col gap-4 xs:gap-6 max-w-360 mx-auto w-full">
             <ProjectWelcomeSection project={projectResponse} />
             {activeTemplate ? (
-                <DocumentSection documentsResponse={documentsResponse} activeTemplate={activeTemplate} />
+                <DocumentSection documentsResponse={documentsResponse || []} activeTemplate={activeTemplate} />
             ) : (
                 <UploadTemplate projectId={projectId} />
             )}

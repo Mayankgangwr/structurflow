@@ -34,6 +34,12 @@ export const documentController = {
         return ok(res, document, "Documents fetched successfully");
     }),
 
+    summary: asyncHandler(async (req: Request, res: Response) => {
+        const projectId = req.params.projectId as string;
+        const summary = await documentService.getDocumentSummary(projectId);
+        return ok(res, summary, "Documents summary fetched successfully");
+    }),
+
     getOne: asyncHandler(async (req: Request, res: Response) => {
         const orgId = req.headers['x-organization-id'] as string;
         const docId = req.params.id as string;
