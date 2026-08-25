@@ -18,24 +18,19 @@ const DocumentSection: React.FC<IDocumentSectionProps> = ({ activeTemplate, docu
     const { originalFileName, mimeType, sizeBytes, createdAt, status } = activeTemplate;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-lg lg:gap-xl mt-3 lg:mt-0">
-            <div className="lg:col-span-8 flex flex-col gap-sm order-2 lg:order-1">
+        <div className="flex-1 flex flex-col lg:grid lg:grid-cols-3 gap-md lg:gap-xl mt-2 lg:mt-0 lg:min-h-[400px] h-full">
+            <div className="lg:col-span-2 flex flex-col gap-sm order-2 lg:order-1 flex-1 lg:flex-none">
                 {documentsResponse.length > 0 ? (
                     <div></div>
                 ) : (
-                    <>
-                        {/* Upload Document */}
-                        <UploadDocument projectId={activeTemplate.projectId} />
-                        {/* Empty State */}
-                        <DocumentEmptyState projectId={activeTemplate.projectId} />
-                    </>
+                    <UploadDocument projectId={activeTemplate.projectId} />
                 )}
             </div>
-            <div className="lg:col-span-4 flex flex-col gap-sm order-1 lg:order-2">
+            <div className="lg:col-span-1 flex flex-col gap-sm order-1 lg:order-2">
                 <h2 className="font-headline-md text-headline-md text-text-primary">Active Template</h2>
                 {/* Active template card */}
                 <div
-                    className="bg-surface border border-border-subtle rounded-md p-sm flex flex-col gap-xs hover:border-primary/30 transition-colors shadow-sm">
+                    className="bg-surface border border-border-subtle rounded-xl p-md flex flex-col gap-sm hover:border-primary/30 transition-colors shadow-sm">
                     <div className="flex items-start gap-md">
                         <div className="p-sm bg-error-container/20 text-error rounded-lg shrink-0">
                             <File />

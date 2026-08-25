@@ -15,7 +15,7 @@ const UploadDocument: React.FC<IUploadDocumentProps> = ({ projectId }) => {
             </div> */}
 
             <div
-                className="border-2 border-dashed border-border-subtle rounded-xl p-xl flex flex-col items-center justify-center text-center gap-md bg-surface hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group">
+                className="flex-1 w-full border-2 border-dashed border-border-subtle rounded-xl p-xl flex flex-col items-center justify-center text-center gap-md bg-surface hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group min-h-[250px] lg:min-h-[300px]">
                 <div
                     className="w-16 h-16 rounded-full bg-surface-container-high group-hover:bg-primary-container/20 flex items-center justify-center text-secondary group-hover:text-primary transition-colors mb-sm">
                     <Upload />
