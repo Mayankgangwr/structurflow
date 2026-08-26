@@ -6,7 +6,7 @@ import ProjectWelcomeSection from './WelcomeSection';
 import UploadTemplate from './UploadTemplate';
 import DocumentSection from './DocumentSection';
 import { Template } from '@/features/templates/templateApi';
-import { useGetDocumentsQuery } from '@/features/documents/documentApi';
+import { useGetDocumentsSummaryQuery } from '@/features/documents/documentApi';
 
 interface IProjectDetailsProps {
     projectId: string;
@@ -15,10 +15,10 @@ interface IProjectDetailsProps {
 
 const ProjectDetails: React.FC<IProjectDetailsProps> = ({ projectId }) => {
     const { data, isLoading } = useGetProjectByIdQuery(projectId);
-    const { data: documentsData, isLoading: isDocumentloading } = useGetDocumentsQuery({ projectId });
+    const { data: summaryData, isLoading: isSummaryLoading } = useGetDocumentsSummaryQuery({ projectId });
 
     const projectResponse = data?.data;
-    const documentsResponse = documentsData?.data;
+    const hasDocuments = summaryData?.data?.TOTAL ? summaryData.data.TOTAL > 0 : false;
 
     if (isLoading) {
         return <div className="p-8 text-center text-secondary">Loading project details...</div>;
@@ -33,7 +33,7 @@ const ProjectDetails: React.FC<IProjectDetailsProps> = ({ projectId }) => {
         <div className="p-2 xs:px-4 xs:py-4 flex-1 flex flex-col gap-4 xs:gap-6 max-w-360 mx-auto w-full">
             <ProjectWelcomeSection project={projectResponse} />
             {activeTemplate ? (
-                <DocumentSection documentsResponse={documentsResponse || []} activeTemplate={activeTemplate} />
+                <DocumentSection hasDocuments={hasDocuments} activeTemplate={activeTemplate} />
             ) : (
                 <UploadTemplate projectId={projectId} />
             )}

@@ -5,12 +5,12 @@ export const useUploadDocument = (projectId: string) => {
     const [uploadDocument, { isLoading, isError, error }] = useUploadDocumentMutation();
     const [uploadError, setUploadError] = useState<string | null>(null);
 
-    const uploadFile = async (file: File) => {
+    const uploadFiles = async (files: File[]) => {
         setUploadError(null);
 
         try {
             // Execute the mutation and unwrap the result to catch errors properly
-            const response = await uploadDocument({ projectId, file, documentType: "RAW" }).unwrap();
+            const response = await uploadDocument({ projectId, files }).unwrap();
 
             return response;
         } catch (err: any) {
@@ -26,7 +26,7 @@ export const useUploadDocument = (projectId: string) => {
     };
 
     return {
-        uploadFile,
+        uploadFiles,
         isLoading,
         isError: isError || uploadError !== null,
         error: uploadError || error,

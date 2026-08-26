@@ -9,7 +9,7 @@ const documentRoutes = Router();
 documentRoutes.use(requireAuth);
 
 // Note: uploadMiddleware.single('file') handles parsing the multipart form data
-documentRoutes.post('/', uploadMiddleware.single('file'), documentController.upload);
+documentRoutes.post('/', uploadMiddleware.array('files', 10), documentController.upload);
 
 documentRoutes.get('/summary/:projectId', documentController.summary);
 documentRoutes.get('/detail/:id', documentController.getOne);

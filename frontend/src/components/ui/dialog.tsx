@@ -58,15 +58,15 @@ export function Dialog({
         {/* Header */}
         {(title || description || showCloseButton) && (
           <div className="flex items-start justify-between border-b p-4">
-            <div>
+            <div className="flex-1 min-w-0">
               {title && (
-                <h2 className="text-xl font-bold text-text-primary">
+                <h2 className="text-xl font-bold text-text-primary truncate">
                   {title}
                 </h2>
               )}
 
               {description && (
-                <p className="mt-1 text-sm text-secondary">
+                <p className="mt-1 text-sm text-secondary truncate">
                   {description}
                 </p>
               )}

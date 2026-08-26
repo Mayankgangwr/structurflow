@@ -19,7 +19,7 @@ export interface DocumentDetailResponse {
 
 export const documentApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        getDocuments: builder.query<{ success: boolean; data: Document[] }, { projectId: string, page?: number, limit?: number }>({
+        getDocuments: builder.query<{ success: boolean; data: { documents: Document[], total: number } }, { projectId: string, page?: number, limit?: number }>({
             query: ({ projectId, page = 1, limit = 10 }) => ({
                 url: `/documents/${projectId}?page=${page}&limit=${limit}`,
                 method: 'GET',
@@ -45,21 +45,28 @@ export const documentApi = baseApi.injectEndpoints({
             ],
         }),
 
-        uploadDocument: builder.mutation<{ success: boolean; data: { document: Document; warnings: string[] } },
-            { projectId: string; file: File; documentType: 'TEMPLATE' | 'RAW'; }>({
-                query: ({ projectId, file, documentType }) => {
+        uploadDocument: builder.mutation<{ success: boolean; data: any },
+            { projectId: string; files: File[] }>({
+                query: ({ projectId, files }) => {
                     const formData = new FormData();
-                    formData.append('file', file);
+
+                    // Append multiple files to the same key
+                    files.forEach(file => {
+                        formData.append('files', file);
+                    });
+
                     formData.append('projectId', projectId);
-                    formData.append('documentType', documentType);
+                    formData.append('documentType', 'RAW');
+
                     return {
                         url: '/documents',
                         method: 'POST',
                         body: formData,
                     };
                 },
-                invalidatesTags: ['Documents', 'Projects'], // Refreshes both lists
+                invalidatesTags: ['Documents'],
             }),
+
     }),
 });
 

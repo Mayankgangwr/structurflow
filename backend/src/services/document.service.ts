@@ -78,12 +78,13 @@ class DocumentService {
                 document,
                 warnings: isDuplicate ? ['An identical file has been uploaded previously.'] : []
             };
-        } catch (error) {
+        } catch (error: any) {
+            console.error('--- UPLOAD DOCUMENT ERROR ---', error);
             // Attempt to clean up the orphaned Cloudinary file asynchronously
             storageService.deleteFile(uploadResult.public_id).catch(() => { });
 
             if (error instanceof DomainError) throw error;
-            throw new Error('Failed to save document record');
+            throw new Error(`Failed to save document record: ${error.message}`);
         }
     }
 

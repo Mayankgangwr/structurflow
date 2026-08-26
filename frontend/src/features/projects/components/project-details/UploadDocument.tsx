@@ -7,13 +7,14 @@ export interface IUploadDocumentProps {
 }
 
 const UploadDocument: React.FC<IUploadDocumentProps> = ({ projectId }) => {
-    const { uploadFile, isLoading, isError, error } = useUploadDocument(projectId);
+    const { uploadFiles, isLoading, isError, error } = useUploadDocument(projectId);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isDragging, setIsDragging] = useState(false);
 
     const handleFile = async (file: File) => {
         try {
-            await uploadFile(file);
+            // The API expects an array of files, so we pass an array containing just the single file
+            await uploadFiles([file]);
         } catch (e) {
             // Errors are handled by the hook state
         }

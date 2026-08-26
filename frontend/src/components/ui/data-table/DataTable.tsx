@@ -41,7 +41,7 @@ const DataTable = <T,>({
     return (
         <div className="w-full bg-surface border border-border-subtle rounded-lg shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-250">
+                <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="border-b border-border-subtle bg-surface-container-lowest">
                             {columns.map((column) => (
