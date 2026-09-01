@@ -29,6 +29,16 @@ export const templateApi = baseApi.injectEndpoints({
             invalidatesTags: ['Templates', 'Projects']
         }),
 
+        // Upload a new template
+        proccessTemplate: builder.mutation<{ success: boolean; data: { template: Template, warnings: string[] } }, string>({
+            query: (templateId) => ({
+                url: '/templates/proccess',
+                method: 'PUT',
+                body: { templateId },
+            }),
+            invalidatesTags: ['Templates', 'Projects']
+        }),
+
         // Get all templates for a project
         getProjectTemplates: builder.query<{ success: boolean; data: Template[] }, string>({
             query: (projectId) => ({
@@ -91,6 +101,7 @@ export const templateApi = baseApi.injectEndpoints({
 
 export const {
     useUploadTemplateMutation,
+    useProccessTemplateMutation,
     useGetProjectTemplatesQuery,
     useGetOrgTemplatesQuery,
     useGetActiveProjectTemplateQuery,

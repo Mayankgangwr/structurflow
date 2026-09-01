@@ -43,6 +43,8 @@ const envSchema = z.object({
     SUPABASE_URL: z.string(),
     SUPABASE_PUBLISHABLE_KEY: z.string(),
     SUPABASE_SECRET_KEY: z.string(),
+
+    GEMINI_API_KEY: z.string().min(1),
 });
 
 const _env = envSchema.safeParse(process.env);

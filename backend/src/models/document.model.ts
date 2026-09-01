@@ -12,7 +12,6 @@ export interface IDocument extends MongooseDocument {
     organizationId: mongoose.Types.ObjectId;
     projectId: mongoose.Types.ObjectId;
     uploadedById: mongoose.Types.ObjectId;
-    documentType: 'TEMPLATE' | 'RAW' | 'TRANSFORMED';
 
     // Original File Metadata
     originalFileName: string;
@@ -54,13 +53,6 @@ const documentSchema = new Schema<IDocument>(
             ref: 'User',
             required: true
         },
-        documentType: {
-            type: String,
-            enum: ['TEMPLATE', 'RAW', 'TRANSFORMED'],
-            required: true,
-            default: 'RAW'
-        },
-
         originalFileName: {
             type: String,
             required: true

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Eye, File, FileText, RefreshCw } from "lucide-react";
-import { Template } from "@/features/templates/templateApi";
+import { Eye, File, FileText, Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { Template, useProccessTemplateMutation } from "@/features/templates/templateApi";
 import { formatDate, formatSize, getFileType } from "@/lib/utils";
 import UploadDocument from "./UploadDocument";
 import DocumentEmptyState from "./DocumentEmptyState";
@@ -18,11 +18,20 @@ export interface IDocumentSectionProps {
 
 const DocumentSection: React.FC<IDocumentSectionProps> = ({ activeTemplate, hasDocuments }) => {
     const [isPreveiwTemplte, setIsPreveiwTemplte] = useState(false);
+    const [proccessTemplateMutation, { isLoading, isError, error }] = useProccessTemplateMutation();
     const [isReplaceTemplate, setIsReplaceTemplate] = useState(false);
 
+    const handleProccessTemplate = async (id: string) => {
+        try {
+            const response = await proccessTemplateMutation(id).unwrap();
+            return response;
+        } catch (err: any) {
+            throw err;
+        }
+    }
 
     if (!activeTemplate) return null;
-    const { originalFileName, mimeType, sizeBytes, createdAt, status } = activeTemplate;
+    const { _id, originalFileName, mimeType, sizeBytes, createdAt, status } = activeTemplate;
 
     return (
         <div className="flex-1 flex flex-col lg:grid lg:grid-cols-3 gap-sm lg:gap-md mt-2 lg:mt-0 lg:min-h-100 h-full">
@@ -56,11 +65,21 @@ const DocumentSection: React.FC<IDocumentSectionProps> = ({ activeTemplate, hasD
                             </div>
                         </div>
                         <div className="flex items-center justify-between border-t border-border-subtle pt-xs mt-xs">
-                            <span
-                                className="inline-flex items-center gap-xs font-label-sm text-label-sm text-tertiary-container">
-                                <span className="w-2 h-2 rounded-full bg-tertiary-fixed-dim"></span>
-                                Status: {status || 'Ready'}
-                            </span>
+                            {status === "UPLOADED" || status === "FAILED" ? (
+                                <Button
+                                    onClick={() => handleProccessTemplate(_id)}
+                                    className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
+                                    title="Preview">
+                                    {isLoading ? <Loader2 /> : <Sparkles />}
+                                </Button>
+                            ) : (
+                                <span
+                                    className="inline-flex items-center gap-xs font-label-sm text-label-sm text-tertiary-container">
+                                    <span className="w-2 h-2 rounded-full bg-tertiary-fixed-dim"></span>
+                                    Status: {status || 'Ready'}
+                                </span>
+
+                            )}
                             <div className="flex items-center gap-sm">
                                 <Button
                                     onClick={() => setIsPreveiwTemplte(true)}

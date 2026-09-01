@@ -11,13 +11,8 @@ class DocumentRepository extends BaseRepository<IDocument> {
         return await this.model.findOne({ _id: documentId, organizationId: organizationId, isDeleted: { $ne: true } })
     }
 
-    async findAllByProject(projectId: string, limit: number = 50, skip: number = 0, docType: 'TEMPLATE' | 'DOC' = "DOC") {
-        let query: any;
-        if (docType === "DOC") {
-            query = { projectId: new mongoose.Types.ObjectId(projectId), documentType: { $ne: 'TEMPLATE' }, isDeleted: { $ne: true } };
-        } else {
-            query = { projectId: new mongoose.Types.ObjectId(projectId), documentType: 'TEMPLATE', isDeleted: { $ne: true } };
-        }
+    async findAllByProject(projectId: string, limit: number = 50, skip: number = 0) {
+        let query = { projectId: new mongoose.Types.ObjectId(projectId), isDeleted: { $ne: true } };
 
         const [documents, total] = await Promise.all([
             this.model.find(query)
@@ -35,12 +30,6 @@ class DocumentRepository extends BaseRepository<IDocument> {
         return this.model.countDocuments({ organizationId, fileHash, isDeleted: { $ne: true } })
     }
 
-    async findByProjectAndType(projectId: string, documentType: 'TEMPLATE' | 'RAW' | 'TRANSFORMED') {
-        return await this.model.find({ projectId, documentType, isDeleted: { $ne: true } })
-            .sort({ createdAt: -1 })
-            .populate('uploadedById', 'firstName lastName email');
-    }
-
     async softDeleteById(documentId: string) {
         return await this.model.findByIdAndUpdate(documentId, { isDeleted: true }, { new: true });
     }
@@ -50,7 +39,6 @@ class DocumentRepository extends BaseRepository<IDocument> {
             {
                 $match: {
                     projectId: new mongoose.Types.ObjectId(projectId),
-                    documentType: { $ne: 'TEMPLATE' },
                     isDeleted: { $ne: true }
                 }
             },

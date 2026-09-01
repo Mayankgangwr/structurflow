@@ -71,16 +71,16 @@ export const ApiErrors = {
     fileTooLarge: (maxSizeMB: number) => new ValidationError('File too large', [{ code: 'FILE_TOO_LARGE', message: `The uploaded file exceeds the maximum allowed size of ${maxSizeMB}MB.` }]),
     uploadFailed: () => new InternalError('File upload failed', [{ code: 'UPLOAD_FAILED', message: 'An error occurred while uploading the file to storage.' }]),
 
-     // --- Projects ---
+    // --- Projects ---
     //  prjectIdRequired: () => new ValidationError(),
     projectNotFound: () => new EntityNotFoundError('Project not found', [{ code: 'PROJECT_NOT_FOUND', message: 'The requested project does not exist.' }]),
 
     // --- Templates ---
     templateNotFound: () => new EntityNotFoundError('Template not found', [{ code: 'TEMPLATE_NOT_FOUND', message: 'The requested template does not exist or does not belong to this project.' }]),
+    invalidTemplateOrOrgId: () => new ValidationError('Invalid template or organization ID', [{ code: 'INVALID_TEMPLATE_OR_ORG_ID', message: 'Invalid template or organization ID.' }]),
+    duplicateTemplate: () => new ConflictError('Template already exists', [{ code: 'DUPLICATE_TEMPLATE', message: 'A template with this exact file already exists in the organization.' }]),
 
     // --- Generic ---
     missingRequiredField: (field: string) => new ValidationError(`${field} is required`, [{ field, code: 'REQUIRED_FIELD', message: `${field} is required.` }]),
     orgIdRequired: () => new ValidationError('Organization ID is required', [{ code: 'ORG_ID_REQUIRED', message: 'The X-Organization-Id header or orgId parameter is required.' }]),
-
-
 }

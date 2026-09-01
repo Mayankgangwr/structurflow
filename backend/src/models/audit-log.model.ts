@@ -2,6 +2,7 @@ import mongoose, { Schema, Document as MongooseDocument } from 'mongoose';
 
 export enum AuditAction {
     DOCUMENT_UPLOADED = 'DOCUMENT_UPLOADED',
+    TEMPLATE_UPLOADED = 'TEMPLATE_UPLOADED',
     DOCUMENT_DELETED = 'DOCUMENT_DELETED',
     DOCUMENT_STATUS_CHANGED = 'DOCUMENT_STATUS_CHANGED',
     EXTRACTION_APPROVED = 'EXTRACTION_APPROVED',

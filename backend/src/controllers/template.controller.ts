@@ -6,6 +6,7 @@ import documentRepository from "@/repositories/document.repository";
 import projectRepository from "@/repositories/project.repository";
 import mongoose from "mongoose";
 import { ok } from "@/utils/response";
+import templateService from "@/services/template.service";
 
 export const templateController = {
 
@@ -21,111 +22,116 @@ export const templateController = {
         const userId = req.user?._id as string;
         const ipAddress = req.ip || req.connection.remoteAddress;
 
-        const result = await documentService.uploadDocument(
+        const result = await templateService.uploadTemplate(
             file,
             organizationId,
             projectId,
             userId,
-            'TEMPLATE', // FORCE type
             ipAddress
         );
 
         return ok(res, result, "Template uploaded successfully");
     }),
 
-    // GET /api/v1/templates/project/:projectId
-    listByProject: asyncHandler(async (req: Request, res: Response) => {
-        const projectId = req.params.projectId as string;
-        if (!projectId) throw ApiErrors.missingRequiredField('Project Id');
-
-        // We could also ensure the project belongs to the org
-        const templates = await documentRepository.findByProjectAndType(projectId, 'TEMPLATE');
-
-        return ok(res, templates, "Templates fetched successfully");
+    proccess: asyncHandler(async (req: Request, res: Response) => {
+        const templateId = req.body.templateId as string;
+        const result = await templateService.proccessTemplate(templateId);
+        return ok(res, result, "Template proccessed successfully");
     }),
 
-    // GET /api/v1/templates
-    listByOrg: asyncHandler(async (req: Request, res: Response) => {
-        const organizationId = req.headers['x-organization-id'] as string;
-        const limit = Number(req.query.limit) || 50;
-        const skip = Number(req.query.skip) || 0;
+    // // GET /api/v1/templates/project/:projectId
+    // listByProject: asyncHandler(async (req: Request, res: Response) => {
+    //     const projectId = req.params.projectId as string;
+    //     if (!projectId) throw ApiErrors.missingRequiredField('Project Id');
 
-        // Find all templates for this org
-        const templates = await documentRepository.findAllByOrg(organizationId, limit, skip);
+    //     // We could also ensure the project belongs to the org
+    //     const templates = await documentRepository.findByProjectAndType(projectId, 'TEMPLATE');
 
-        return ok(res, templates, "Organization templates fetched successfully");
-    }),
+    //     return ok(res, templates, "Templates fetched successfully");
+    // }),
 
-    // GET /api/v1/templates/project/:projectId/active
-    getActiveByProject: asyncHandler(async (req: Request, res: Response) => {
-        const projectId = req.params.projectId as string;
-        const organizationId = req.headers['x-organization-id'] as string;
+    // // GET /api/v1/templates
+    // listByOrg: asyncHandler(async (req: Request, res: Response) => {
+    //     const organizationId = req.headers['x-organization-id'] as string;
+    //     const limit = Number(req.query.limit) || 50;
+    //     const skip = Number(req.query.skip) || 0;
 
-        if (!projectId) throw ApiErrors.missingRequiredField('Project Id');
+    //     // Find all templates for this org
+    //     const templates = await documentRepository.findAllByOrg(organizationId, limit, skip);
 
-        const project = await projectRepository.findByIdAndOrg(projectId, organizationId);
-        if (!project) throw ApiErrors.templateNotFound();
+    //     return ok(res, templates, "Organization templates fetched successfully");
+    // }),
 
-        if (!project.templateDocumentId) {
-            return ok(res, null, "No active template set for this project");
-        }
+    // // GET /api/v1/templates/project/:projectId/active
+    // getActiveByProject: asyncHandler(async (req: Request, res: Response) => {
+    //     const projectId = req.params.projectId as string;
+    //     const organizationId = req.headers['x-organization-id'] as string;
 
-        const template = await documentRepository.findByIdAndOrg(project.templateDocumentId.toString(), organizationId);
-        return ok(res, template, "Active template fetched successfully");
-    }),
+    //     if (!projectId) throw ApiErrors.missingRequiredField('Project Id');
 
-    // GET /api/v1/templates/:id
-    getOne: asyncHandler(async (req: Request, res: Response) => {
-        const id = req.params.id as string;
-        const organizationId = req.headers['x-organization-id'] as string;
+    //     const project = await projectRepository.findByIdAndOrg(projectId, organizationId);
+    //     if (!project) throw ApiErrors.templateNotFound();
 
-        if (!id) throw ApiErrors.missingRequiredField('Template Id');
+    //     if (!project.templateDocumentId) {
+    //         return ok(res, null, "No active template set for this project");
+    //     }
 
-        const details = await documentService.getDocumentDetails(id, organizationId);
+    //     const template = await documentRepository.findByIdAndOrg(project.templateDocumentId.toString(), organizationId);
+    //     return ok(res, template, "Active template fetched successfully");
+    // }),
 
-        // Ensure it's actually a template
-        if (details.document.documentType !== 'TEMPLATE') {
-            throw ApiErrors.templateNotFound();
-        }
+    // // GET /api/v1/templates/:id
+    // getOne: asyncHandler(async (req: Request, res: Response) => {
+    //     const id = req.params.id as string;
+    //     const organizationId = req.headers['x-organization-id'] as string;
 
-        return ok(res, details, "Template fetched successfully");
-    }),
+    //     if (!id) throw ApiErrors.missingRequiredField('Template Id');
 
-    // PUT /api/v1/templates/:id/active
-    setActive: asyncHandler(async (req: Request, res: Response) => {
-        const id = req.params.id as string;
-        const organizationId = req.headers['x-organization-id'] as string;
+    //     const details = await documentService.getDocumentDetails(id, organizationId);
 
-        if (!id) throw ApiErrors.missingRequiredField('Template Id');
-        const { projectId } = req.body;
-        if (!projectId) throw ApiErrors.missingRequiredField('projectId');
+    //     // Ensure it's actually a template
+    //     if (details.document.documentType !== 'TEMPLATE') {
+    //         throw ApiErrors.templateNotFound();
+    //     }
 
-        // Verify the template exists and belongs to the org/project
-        const template = await documentRepository.findByIdAndOrg(id, organizationId);
-        if (!template || template.documentType !== 'TEMPLATE' || template.projectId.toString() !== projectId) {
-            throw ApiErrors.templateNotFound();
-        }
+    //     return ok(res, details, "Template fetched successfully");
+    // }),
 
-        await projectRepository.updateTemplate(projectId, new mongoose.Types.ObjectId(id));
+    // // PUT /api/v1/templates/:id/active
+    // setActive: asyncHandler(async (req: Request, res: Response) => {
+    //     const id = req.params.id as string;
+    //     const organizationId = req.headers['x-organization-id'] as string;
 
-        return ok(res, { success: true }, "Active template updated successfully");
-    }),
+    //     if (!id) throw ApiErrors.missingRequiredField('Template Id');
+    //     const { projectId } = req.body;
+    //     if (!projectId) throw ApiErrors.missingRequiredField('projectId');
 
-    // DELETE /api/v1/templates/:id
-    delete: asyncHandler(async (req: Request, res: Response) => {
-        const id = req.params.id as string;
-        const organizationId = req.headers['x-organization-id'] as string;
-        const userId = req.user?._id as string;
+    //     // Verify the template exists and belongs to the org/project
+    //     const template = await documentRepository.findByIdAndOrg(id, organizationId);
+    //     if (!template || template.documentType !== 'TEMPLATE' || template.projectId.toString() !== projectId) {
+    //         throw ApiErrors.templateNotFound();
+    //     }
 
-        if (!id) throw ApiErrors.missingRequiredField('Template Id');
+    //     await projectRepository.updateTemplate(projectId, new mongoose.Types.ObjectId(id));
 
-        const template = await documentRepository.findByIdAndOrg(id, organizationId);
-        if (!template || template.documentType !== 'TEMPLATE') {
-            throw ApiErrors.templateNotFound();
-        }
+    //     return ok(res, { success: true }, "Active template updated successfully");
+    // }),
 
-        await documentService.deleteDocument(id, organizationId, userId);
+    // // DELETE /api/v1/templates/:id
+    // delete: asyncHandler(async (req: Request, res: Response) => {
+    //     const id = req.params.id as string;
+    //     const organizationId = req.headers['x-organization-id'] as string;
+    //     const userId = req.user?._id as string;
 
-        return ok(res, { success: true }, "Template deleted successfully");
-    }),
+    //     if (!id) throw ApiErrors.missingRequiredField('Template Id');
+
+    //     const template = await documentRepository.findByIdAndOrg(id, organizationId);
+    //     if (!template || template.documentType !== 'TEMPLATE') {
+    //         throw ApiErrors.templateNotFound();
+    //     }
+
+    //     await documentService.deleteDocument(id, organizationId, userId);
+
+    //     return ok(res, { success: true }, "Template deleted successfully");
+    // }),
 };

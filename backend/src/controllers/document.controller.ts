@@ -3,7 +3,6 @@ import { asyncHandler } from "@/utils/asyncHandler";
 import { ApiErrors } from '@/utils/errors';
 import documentService from '@/services/document.service';
 import { ok } from '@/utils/response';
-import { string } from 'zod';
 export const documentController = {
     upload: asyncHandler(async (req: Request, res: Response) => {
         // Read multiple files
@@ -11,12 +10,9 @@ export const documentController = {
         if (!files || files.length === 0) throw ApiErrors.missingRequiredField('files');
 
         const orgId = req.headers['x-organization-id'] as string;
-        const { projectId, documentType = 'RAW' } = req.body;
+        const { projectId } = req.body;
 
         if (!projectId) throw ApiErrors.missingRequiredField('projectId');
-        if (!documentType || !['TEMPLATE', 'RAW'].includes(documentType)) {
-            throw ApiErrors.invalidDocumentType();
-        }
 
         const userId = req.user!._id;
         const ip = req.ip || req.socket.remoteAddress;
@@ -24,7 +20,7 @@ export const documentController = {
         // Upload all files concurrently
         const results = await Promise.all(
             files.map(file =>
-                documentService.uploadDocument(file, orgId, projectId, userId, documentType, ip)
+                documentService.uploadDocument(file, orgId, projectId, userId, ip)
             )
         );
 
@@ -37,7 +33,7 @@ export const documentController = {
         const limit = parseInt(req.query.limit as string) || 50;
         const projectId = req.params.projectId as string;
 
-        const result = await documentService.getDocumentsList(projectId, page, limit, "DOC");
+        const result = await documentService.getDocumentsList(projectId, page, limit);
         return ok(res, result, "Documents fetched successfully");
     }),
 
@@ -54,5 +50,17 @@ export const documentController = {
         const result = await documentService.getDocumentDetails(docId, orgId);
 
         return ok(res, result, 'Document details fetched successfully');
-    })
+    }),
+
+    delete: asyncHandler(async (req: Request, res: Response) => {
+        const id = req.params.id as string;
+        const organizationId = req.headers['x-organization-id'] as string;
+        const userId = req.user?._id as string;
+
+        if (!id) throw ApiErrors.missingRequiredField('Template Id');
+
+        await documentService.deleteDocument(id, organizationId, userId);
+
+        return ok(res, { success: true }, "Template deleted successfully");
+    }),
 }

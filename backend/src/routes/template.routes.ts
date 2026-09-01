@@ -11,12 +11,14 @@ templateRoutes.use(requireAuth);
 // Note: uploadMiddleware.single('file') handles parsing the multipart form data
 templateRoutes.post('/', uploadMiddleware.single('file'), templateController.upload);
 
-templateRoutes.get('/project/:projectId', templateController.listByProject);
-templateRoutes.get('/', templateController.listByOrg);
-templateRoutes.get('/project/:projectId/active', templateController.getActiveByProject);
-templateRoutes.get('/:id', templateController.getOne);
+// Proccess the template
+templateRoutes.put('/proccess', templateController.proccess);
+// templateRoutes.get('/project/:projectId', templateController.listByProject);
+// templateRoutes.get('/', templateController.listByOrg);
+// templateRoutes.get('/project/:projectId/active', templateController.getActiveByProject);
+// templateRoutes.get('/:id', templateController.getOne);
 
-templateRoutes.put('/:id/active', templateController.setActive);
-templateRoutes.delete('/:id', templateController.delete);
+// templateRoutes.put('/:id/active', templateController.setActive);
+// templateRoutes.delete('/:id', templateController.delete);
 
 export default templateRoutes;

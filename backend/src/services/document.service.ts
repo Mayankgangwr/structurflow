@@ -20,7 +20,6 @@ class DocumentService {
         organizationId: string,
         projectId: string,
         userId: string,
-        documentType: 'TEMPLATE' | 'RAW' | 'TRANSFORMED',
         ipAddress?: string
     ) {
         // 1. Calculate SHA-256 hash of the file buffer
@@ -45,7 +44,6 @@ class DocumentService {
                 organizationId: new mongoose.Types.ObjectId(organizationId),
                 projectId: new mongoose.Types.ObjectId(projectId),
                 uploadedById: new mongoose.Types.ObjectId(userId),
-                documentType,
                 originalFileName: file.originalname,
                 mimeType: file.mimetype,
                 sizeBytes: file.size,
@@ -54,10 +52,6 @@ class DocumentService {
                 secureUrl: uploadResult.secure_url,
                 status: DocumentStatus.UPLOADED,
             });
-
-            if (documentType === 'TEMPLATE') {
-                await projectRepository.updateTemplate(projectId, document._id as mongoose.Types.ObjectId);
-            }
 
             await auditLogRepository.create({
                 organizationId: new mongoose.Types.ObjectId(organizationId),
@@ -88,10 +82,10 @@ class DocumentService {
         }
     }
 
-    async getDocumentsList(projectId: string, page = 1, limit = 50, docType: 'TEMPLATE' | 'DOC' = "DOC") {
+    async getDocumentsList(projectId: string, page = 1, limit = 50) {
         const skip = (page - 1) * limit;
 
-        return await documentRepository.findAllByProject(projectId, limit, skip, docType);
+        return await documentRepository.findAllByProject(projectId, limit, skip);
     }
 
     async getDocumentDetails(documentId: string, organizationId: string) {
@@ -107,15 +101,6 @@ class DocumentService {
         if (!document) throw ApiErrors.documentNotFound();
 
         await documentRepository.softDeleteById(documentId);
-
-        // If it was a template, check if it was the active one on the project
-        if (document.documentType === 'TEMPLATE') {
-            const project = await projectRepository.findByIdAndOrg(document.projectId.toString(), organizationId);
-            if (project && project.templateDocumentId && project.templateDocumentId.toString() === documentId) {
-                // If it was the active template, nullify it (user will have to select a new one)
-                await projectRepository.updateTemplate(project._id.toString(), null as any);
-            }
-        }
 
         await auditLogRepository.create({
             organizationId: new mongoose.Types.ObjectId(organizationId),
