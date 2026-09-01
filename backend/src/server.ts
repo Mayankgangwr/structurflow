@@ -4,6 +4,9 @@ import { config } from "./config/env";
 import { connectDatabase } from "./config/database";
 import { logger } from "./utils/logger";
 
+// Start the BullMQ document processing worker
+import './workers/document.worker';
+
 const startServer = async () => {
     try {
         // connect to DB

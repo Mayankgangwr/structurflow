@@ -1,5 +1,8 @@
 import React, { useState } from "react";
-import { Document, useGetDocumentsQuery } from "@/features/documents/documentApi";
+import { useRouter } from "next/navigation";
+import { Document, useGetDocumentsQuery, useRetryDocumentMutation } from "@/features/documents/documentApi";
+import { useGetProjectByIdQuery } from "@/features/projects/projectApi";
+import { Template } from "@/features/templates/templateApi";
 import DataTable, { DataTableColumn } from "@/components/ui/data-table/DataTable";
 import { DataTablePagination } from "@/components/ui/data-table/DataTablePagination";
 import { cn, formatDate, formatSize, getFileType } from "@/lib/utils";
@@ -7,6 +10,8 @@ import { Eye, FileText, FileDown, Sparkles, FileCheck, Trash2, Upload } from "lu
 import { Button } from "@/components/ui/button";
 import UploadDocumentsForm from "@/features/documents/components/UploadDocumentsForm";
 import PdfPreviewDialog from "@/components/documents/PdfPreviewDialog";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export interface IDocumentViewProps {
     projectId: string;
@@ -18,16 +23,38 @@ export interface IPreviewDocument {
 }
 
 const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
+    const router = useRouter();
     const [isUploadFormOpen, setIsUploadFormOpen] = useState<boolean>(false);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
 
     const [previewDocument, setPreviewDocument] = useState<IPreviewDocument>({ data: null, isOpen: false });
 
-    const { data: queryData, isLoading } = useGetDocumentsQuery({ projectId, page, limit: pageSize });
+    const [retryDocument] = useRetryDocumentMutation();
+
+    // First, let's get the data without polling to check if we need to poll
+    const { data: queryData, isLoading } = useGetDocumentsQuery(
+        { projectId, page, limit: pageSize }
+    );
+    const { data: projectQueryData } = useGetProjectByIdQuery(projectId);
+    const templateData: Template | undefined = projectQueryData?.data?.templateData;
 
     const documents = queryData?.data?.documents || [];
     const totalDocuments = queryData?.data?.total || 0;
+
+    // Determine if any document is currently in the pipeline
+    const isProcessing = documents.some((doc: Document) =>
+        ['UPLOADED', 'PROCESSING', 'EXTRACTED', 'MAPPING', 'VALIDATING'].includes(doc.status)
+    );
+
+    // If there are processing documents, set up a polling interval
+    useGetDocumentsQuery(
+        { projectId, page, limit: pageSize },
+        {
+            skip: !isProcessing,
+            pollingInterval: 3000
+        }
+    );
 
     const totalPages = Math.ceil(totalDocuments / pageSize);
     const startItem = (page - 1) * pageSize + 1;
@@ -41,8 +68,52 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
 
     }
 
-    const handleView = (id: string) => {
+    const handleExport = async (doc: Document) => {
+        if (!doc.verifiedData && !doc.structuredData) {
+            import('react-hot-toast').then(({ default: toast }) => toast.error('No verified data to export'));
+            return;
+        }
 
+        try {
+            const toast = (await import('react-hot-toast')).default;
+            toast.loading('Generating high-fidelity PDF...', { id: 'exporting' });
+            
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+            const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+
+            const response = await fetch(`${baseUrl}/api/v1/documents/${doc._id}/export`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) throw new Error('Failed to export document');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            
+            const a = window.document.createElement('a');
+            a.href = url;
+            a.download = `${doc.originalFileName?.split('.')[0] || 'document'}_extracted.pdf`;
+            window.document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            window.document.body.removeChild(a);
+
+            toast.success('Document exported successfully', { id: 'exporting' });
+        } catch (error) {
+            console.error('Export error:', error);
+            import('react-hot-toast').then(({ default: toast }) => toast.error('Failed to export document', { id: 'exporting' }));
+        }
+    };
+
+    const handleRetry = async (id: string) => {
+        try {
+            await retryDocument(id).unwrap();
+        } catch (error) {
+            console.error("Failed to retry document:", error);
+        }
     }
 
     const documentColumns: DataTableColumn<Document>[] = [
@@ -129,10 +200,11 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
                         <Eye className="h-5 w-5 text-primary/70 hover:text-primary" />
                     </Button>
 
-                    {document.status === 'UPLOADED' ? (
+                    {document.status === 'UPLOADED' || document.status === 'FAILED' ? (
                         <Button
                             variant="outline"
-                            title="Transform Document"
+                            title={document.status === 'FAILED' ? 'Retry Transform' : 'Transform Document'}
+                            onClick={() => handleRetry(document._id)}
                             className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
                             size={"icon-sm"}>
                             <Sparkles className="h-5 w-5 text-primary/70 hover:text-primary" />
@@ -141,14 +213,16 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
                         <Button
                             variant="outline"
                             title="Verify Document"
-                            className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
+                            onClick={() => router.push(`/project/${projectId}/documents/${document._id}/review`)}
+                            className="text-error hover:text-error transition-colors flex items-center justify-center p-xs rounded-md hover:bg-error-container/20 border-error/30"
                             size={"icon-sm"}>
-                            <FileCheck className="h-5 w-5 text-primary/70 hover:text-primary" />
+                            <FileCheck className="h-5 w-5 text-error/70 hover:text-error" />
                         </Button>
                     ) : document.status === "TRUSTED" && (
                         <Button
                             variant="outline"
                             title="Export Document"
+                            onClick={() => handleExport(document)}
                             className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
                             size={"icon-sm"}>
                             <FileDown className="h-5 w-5 text-primary/70 hover:text-primary" />

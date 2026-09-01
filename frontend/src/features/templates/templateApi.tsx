@@ -12,7 +12,18 @@ export interface Template {
     fileHash: string;
     publicId: string;
     secureUrl: string;
-    status: string;
+    status: 'UPLOADED' | 'PROCESSING' | 'PARSED' | 'FAILED';
+    targetSchema?: {
+        documentType: string;
+        fields: Array<{
+            name: string;
+            type: string;
+            required: boolean;
+            description?: string;
+        }>;
+    };
+    htmlTemplate?: string;
+    processingError?: string;
     createdAt: string;
     updatedAt: string;
 }

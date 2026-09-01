@@ -77,6 +77,16 @@ export const ApiErrors = {
 
     // --- Templates ---
     templateNotFound: () => new EntityNotFoundError('Template not found', [{ code: 'TEMPLATE_NOT_FOUND', message: 'The requested template does not exist or does not belong to this project.' }]),
+    templateNoExtractableText: () => new ValidationError('Template PDF contains no extractable text', [{ code: 'TEMPLATE_NO_TEXT', message: 'The uploaded template PDF does not contain any extractable text. Please ensure the document is a text-searchable PDF and not an image-only scan.' }]),
+    templateSchemaGenerationFailed: (message: string) => new InternalError('Failed to generate target schema', [{ code: 'TEMPLATE_SCHEMA_GENERATION_FAILED', message: `Failed to generate target schema: ${message}` }]),
+    missingParsedTemplate: () => new ValidationError('Missing parsed template', [{ code: 'MISSING_PARSED_TEMPLATE', message: 'No parsed template was found for this project. Please upload and parse a template first.' }]),
+    
+    // --- LLM / External APIs ---
+    geminiApiError: (status: number, message: string) => new InternalError('LLM API Error', [{ code: 'GEMINI_API_ERROR', message: `Gemini API error: ${status} — ${message}` }]),
+    emptyLlmResponse: () => new InternalError('Empty LLM Response', [{ code: 'EMPTY_LLM_RESPONSE', message: 'The AI model returned an empty response.' }]),
+    invalidLlmSchema: () => new ValidationError('Invalid LLM Schema', [{ code: 'INVALID_LLM_SCHEMA', message: 'The AI model returned an invalid schema structure.' }]),
+    llmMappingFailed: (message: string) => new InternalError('LLM Mapping Failed', [{ code: 'LLM_MAPPING_FAILED', message: `LLM mapping failed: ${message}` }]),
+    
 
     // --- Generic ---
     missingRequiredField: (field: string) => new ValidationError(`${field} is required`, [{ field, code: 'REQUIRED_FIELD', message: `${field} is required.` }]),

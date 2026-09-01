@@ -1,4 +1,4 @@
-import { DocumentModel, IDocument } from "@/models/document.model"
+import { DocumentModel, IDocument } from "@/models/document.model";
 import BaseRepository from "./base.repository";
 import mongoose from "mongoose";
 
@@ -8,16 +8,18 @@ class DocumentRepository extends BaseRepository<IDocument> {
     }
 
     async findByIdAndOrg(documentId: string, organizationId: string) {
-        return await this.model.findOne({ _id: documentId, organizationId: organizationId, isDeleted: { $ne: true } })
+        return this.model.findOne({
+            _id: documentId,
+            organizationId,
+            isDeleted: { $ne: true }
+        });
     }
 
-    async findAllByProject(projectId: string, limit: number = 50, skip: number = 0, docType: 'TEMPLATE' | 'DOC' = "DOC") {
-        let query: any;
-        if (docType === "DOC") {
-            query = { projectId: new mongoose.Types.ObjectId(projectId), documentType: { $ne: 'TEMPLATE' }, isDeleted: { $ne: true } };
-        } else {
-            query = { projectId: new mongoose.Types.ObjectId(projectId), documentType: 'TEMPLATE', isDeleted: { $ne: true } };
-        }
+    async findAllByProject(projectId: string, limit = 50, skip = 0) {
+        const query = {
+            projectId: new mongoose.Types.ObjectId(projectId),
+            isDeleted: { $ne: true }
+        };
 
         const [documents, total] = await Promise.all([
             this.model.find(query)
@@ -32,17 +34,19 @@ class DocumentRepository extends BaseRepository<IDocument> {
     }
 
     async countByOrgAndHash(organizationId: string, fileHash: string) {
-        return this.model.countDocuments({ organizationId, fileHash, isDeleted: { $ne: true } })
-    }
-
-    async findByProjectAndType(projectId: string, documentType: 'TEMPLATE' | 'RAW' | 'TRANSFORMED') {
-        return await this.model.find({ projectId, documentType, isDeleted: { $ne: true } })
-            .sort({ createdAt: -1 })
-            .populate('uploadedById', 'firstName lastName email');
+        return this.model.countDocuments({
+            organizationId,
+            fileHash,
+            isDeleted: { $ne: true }
+        });
     }
 
     async softDeleteById(documentId: string) {
-        return await this.model.findByIdAndUpdate(documentId, { isDeleted: true }, { new: true });
+        return this.model.findByIdAndUpdate(
+            documentId,
+            { isDeleted: true },
+            { new: true }
+        );
     }
 
     async getSummaryByProject(projectId: string) {
@@ -50,7 +54,6 @@ class DocumentRepository extends BaseRepository<IDocument> {
             {
                 $match: {
                     projectId: new mongoose.Types.ObjectId(projectId),
-                    documentType: { $ne: 'TEMPLATE' },
                     isDeleted: { $ne: true }
                 }
             },
@@ -62,18 +65,22 @@ class DocumentRepository extends BaseRepository<IDocument> {
             }
         ]);
 
-        const summary = {
+        const summary: Record<string, number> = {
             TOTAL: 0,
             UPLOADED: 0,
-            TRANSFORMED: 0,
-            VERIFIED: 0,
-            REJECTED: 0,
-            EXPORTED: 0
+            PROCESSING: 0,
+            EXTRACTED: 0,
+            MAPPING: 0,
+            VALIDATING: 0,
+            REVIEW_REQUIRED: 0,
+            TRUSTED: 0,
+            COMPLETED: 0,
+            FAILED: 0
         };
 
         stats.forEach(stat => {
             if (stat._id in summary) {
-                summary[stat._id as keyof typeof summary] = stat.count;
+                summary[stat._id as string] = stat.count;
             }
             summary.TOTAL += stat.count;
         });

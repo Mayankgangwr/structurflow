@@ -3,49 +3,46 @@ import { AuditAction } from "@/models/audit-log.model";
 import { DocumentStatus } from "@/models/document.model";
 import auditLogRepository from "@/repositories/audit-log.repository";
 import documentRepository from "@/repositories/document.repository";
-import projectRepository from "@/repositories/project.repository";
 import { ApiErrors, DomainError } from "@/utils/errors";
+import { enqueueDocumentProcess } from "@/jobs/document.queue";
 import crypto from "crypto";
 import path from "path";
 import mongoose from "mongoose";
 import { v4 as uuidv4 } from "uuid";
+
 class DocumentService {
 
     /**
-    * Processes a direct file upload from the client.
-    */
-
+     * Uploads a RAW document and enqueues it for background processing.
+     */
     async uploadDocument(
         file: Express.Multer.File,
         organizationId: string,
         projectId: string,
         userId: string,
-        documentType: 'TEMPLATE' | 'RAW' | 'TRANSFORMED',
         ipAddress?: string
     ) {
+
         // 1. Calculate SHA-256 hash of the file buffer
         const fileHash = crypto.createHash('sha256').update(file.buffer).digest('hex');
-
         // 2. Check for exact duplicates in the same organization
-
         const duplicateCount = await documentRepository.countByOrgAndHash(organizationId, fileHash);
         const isDuplicate = duplicateCount > 0;
 
         // 3. Define Local Folder and Filename
-        const folder = `structurflow/${organizationId}`;
+        const folder = `structurflow/${organizationId}/documents`;
         const extension = path.extname(file.originalname);
         const filename = `${uuidv4()}${extension}`;
 
         // 4. Upload directly to Supabase Storage
         const uploadResult = await storageService.uploadFile(file.buffer, folder, filename, file.mimetype);
 
-        // 5. Persist Document and Audit Log (Without Transactions for standalone DB)
+        // 5. Persist Document and Audit Log (Without Transactions for standalone DB)        
         try {
             const document = await documentRepository.create({
                 organizationId: new mongoose.Types.ObjectId(organizationId),
                 projectId: new mongoose.Types.ObjectId(projectId),
                 uploadedById: new mongoose.Types.ObjectId(userId),
-                documentType,
                 originalFileName: file.originalname,
                 mimeType: file.mimetype,
                 sizeBytes: file.size,
@@ -54,10 +51,6 @@ class DocumentService {
                 secureUrl: uploadResult.secure_url,
                 status: DocumentStatus.UPLOADED,
             });
-
-            if (documentType === 'TEMPLATE') {
-                await projectRepository.updateTemplate(projectId, document._id as mongoose.Types.ObjectId);
-            }
 
             await auditLogRepository.create({
                 organizationId: new mongoose.Types.ObjectId(organizationId),
@@ -72,7 +65,8 @@ class DocumentService {
                 ipAddress
             });
 
-            // Note: In Phase 4, we will queue the BullMQ processing job right here!
+            // Enqueue for background processing (Extract → Map → Validate)
+            await enqueueDocumentProcess(document._id.toString(), projectId);
 
             return {
                 document,
@@ -82,24 +76,21 @@ class DocumentService {
             console.error('--- UPLOAD DOCUMENT ERROR ---', error);
             // Attempt to clean up the orphaned Cloudinary file asynchronously
             storageService.deleteFile(uploadResult.public_id).catch(() => { });
-
             if (error instanceof DomainError) throw error;
             throw new Error(`Failed to save document record: ${error.message}`);
         }
     }
 
-    async getDocumentsList(projectId: string, page = 1, limit = 50, docType: 'TEMPLATE' | 'DOC' = "DOC") {
+    async getDocumentsList(projectId: string, page = 1, limit = 50) {
         const skip = (page - 1) * limit;
-
-        return await documentRepository.findAllByProject(projectId, limit, skip, docType);
+        return await documentRepository.findAllByProject(projectId, limit, skip);
     }
 
     async getDocumentDetails(documentId: string, organizationId: string) {
         const document = await documentRepository.findByIdAndOrg(documentId, organizationId);
         if (!document) throw ApiErrors.documentNotFound();
         const auditTrail = await auditLogRepository.findByDocument(documentId);
-
-        return { document, auditTrail }
+        return { document, auditTrail };
     }
 
     async deleteDocument(documentId: string, organizationId: string, userId: string) {
@@ -108,30 +99,38 @@ class DocumentService {
 
         await documentRepository.softDeleteById(documentId);
 
-        // If it was a template, check if it was the active one on the project
-        if (document.documentType === 'TEMPLATE') {
-            const project = await projectRepository.findByIdAndOrg(document.projectId.toString(), organizationId);
-            if (project && project.templateDocumentId && project.templateDocumentId.toString() === documentId) {
-                // If it was the active template, nullify it (user will have to select a new one)
-                await projectRepository.updateTemplate(project._id.toString(), null as any);
-            }
-        }
-
         await auditLogRepository.create({
             organizationId: new mongoose.Types.ObjectId(organizationId),
             actorId: new mongoose.Types.ObjectId(userId),
             documentId: document._id as mongoose.Types.ObjectId,
             action: AuditAction.DOCUMENT_DELETED,
-            details: {
-                filename: document.originalFileName
-            }
+            details: { filename: document.originalFileName }
         });
 
         return { success: true };
     }
 
     async getDocumentSummary(projectId: string) {
-        return await documentRepository.getSummaryByProject(projectId);
+        return documentRepository.getSummaryByProject(projectId);
+    }
+
+    async verifyDocument(documentId: string, organizationId: string, userId: string, verifiedData: Record<string, any>) {
+        const document = await documentRepository.findByIdAndOrg(documentId, organizationId);
+        if (!document) throw ApiErrors.documentNotFound();
+
+        document.verifiedData = verifiedData;
+        document.status = DocumentStatus.TRUSTED;
+        await document.save();
+
+        await auditLogRepository.create({
+            organizationId: new mongoose.Types.ObjectId(organizationId),
+            actorId: new mongoose.Types.ObjectId(userId),
+            documentId: document._id as mongoose.Types.ObjectId,
+            action: AuditAction.DOCUMENT_UPDATED,
+            details: { message: 'Document data verified and corrected by user' }
+        });
+
+        return document;
     }
 }
 

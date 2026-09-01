@@ -7,7 +7,14 @@ export interface Document {
     mimeType: string;
     secureUrl: string;
     sizeBytes: number;
-    status: 'UPLOADED' | 'PROCESSING' | 'REVIEW_REQUIRED' | 'TRUSTED' | 'REJECTED' | 'FAILED';
+    status: 'UPLOADED' | 'PROCESSING' | 'EXTRACTED' | 'MAPPING'
+    | 'VALIDATING' | 'REVIEW_REQUIRED' | 'TRUSTED' | 'COMPLETED' | 'FAILED';
+    structuredData?: Record<string, any>;
+    validationResult?: {
+        isValid: boolean;
+        confidence: number;
+        errors: Array<{ field: string; message: string; severity: string }>;
+    };
     createdAt: string;
 }
 
@@ -67,6 +74,29 @@ export const documentApi = baseApi.injectEndpoints({
                 invalidatesTags: ['Documents'],
             }),
 
+        verifyDocument: builder.mutation<{ success: boolean; data: Document }, { documentId: string; verifiedData: Record<string, any> }>({
+            query: ({ documentId, verifiedData }) => ({
+                url: `/documents/${documentId}/verify`,
+                method: 'PUT',
+                body: { verifiedData },
+            }),
+            invalidatesTags: (result, error, { documentId }) => [
+                'Documents',
+                { type: 'Documents', id: documentId },
+            ],
+        }),
+
+        retryDocument: builder.mutation<{ success: boolean; data: any }, string>({
+            query: (documentId) => ({
+                url: `/documents/${documentId}/retry`,
+                method: 'POST',
+            }),
+            invalidatesTags: (result, error, documentId) => [
+                'Documents',
+                { type: 'Documents', id: documentId },
+            ],
+        }),
+
     }),
 });
 
@@ -74,5 +104,7 @@ export const {
     useGetDocumentsQuery,
     useGetDocumentsSummaryQuery,
     useGetDocumentByIdQuery,
-    useUploadDocumentMutation
+    useUploadDocumentMutation,
+    useVerifyDocumentMutation,
+    useRetryDocumentMutation
 } = documentApi;

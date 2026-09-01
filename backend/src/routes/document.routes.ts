@@ -13,6 +13,9 @@ documentRoutes.post('/', uploadMiddleware.array('files', 10), documentController
 
 documentRoutes.get('/summary/:projectId', documentController.summary);
 documentRoutes.get('/detail/:id', documentController.getOne);
+documentRoutes.put('/:id/verify', documentController.verify);
+documentRoutes.post('/:id/retry', documentController.retry);
+documentRoutes.get('/:id/export', documentController.exportDocumentPdf);
 documentRoutes.get('/:projectId', documentController.list);
 
 export default documentRoutes;

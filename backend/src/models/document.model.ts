@@ -2,35 +2,58 @@ import mongoose, { Schema, Document as MongooseDocument } from "mongoose";
 
 export enum DocumentStatus {
     UPLOADED = 'UPLOADED',
-    TRANSFORMED = 'TRANSFORMED',
-    VERIFIED = 'VERIFIED',
-    REJECTED = 'REJECTED',
-    EXPORTED = 'EXPORTED'
+    PROCESSING = 'PROCESSING',
+    EXTRACTED = 'EXTRACTED',
+    MAPPING = 'MAPPING',
+    VALIDATING = 'VALIDATING',
+    REVIEW_REQUIRED = 'REVIEW_REQUIRED',
+    TRUSTED = 'TRUSTED',
+    COMPLETED = 'COMPLETED',
+    FAILED = 'FAILED'
 }
 
 export interface IDocument extends MongooseDocument {
     organizationId: mongoose.Types.ObjectId;
     projectId: mongoose.Types.ObjectId;
     uploadedById: mongoose.Types.ObjectId;
-    documentType: 'TEMPLATE' | 'RAW' | 'TRANSFORMED';
 
     // Original File Metadata
     originalFileName: string;
     mimeType: string;
     sizeBytes: number;
-    fileHash: string; // // Used for duplicate detection (SHA-256)
+    fileHash: string;
 
-    // Storage (Cloudinary)
-    publicId: string; // Cloudinary public_id
-    secureUrl: string; // Cloudinary secure_url for viewing
+    // Storage (Supabase)
+    publicId: string;
+    secureUrl: string;
 
     // Processing State
     status: DocumentStatus;
-    processingProgress?: any; // To be expanded in Phase 4
-    extractedData?: any;      // To be expanded in Phase 5
+
+    // Pipeline Data — populated by the worker as it progresses
+    sourceData?: {
+        rawText: string;
+        pages: number;
+        metadata?: Record<string, any>;
+    };
+    structuredData?: Record<string, any>;
+    validationResult?: {
+        isValid: boolean;
+        confidence: number;
+        errors: Array<{
+            field: string;
+            message: string;
+            severity: 'error' | 'warning';
+        }>;
+    };
+    verifiedData?: Record<string, any>;
+
+    // Processing metadata
+    processingStartedAt?: Date;
+    processingCompletedAt?: Date;
+    processingError?: string;
 
     isDeleted: boolean;
-
     createdAt: Date;
     updatedAt: Date;
 }
@@ -54,38 +77,14 @@ const documentSchema = new Schema<IDocument>(
             ref: 'User',
             required: true
         },
-        documentType: {
-            type: String,
-            enum: ['TEMPLATE', 'RAW', 'TRANSFORMED'],
-            required: true,
-            default: 'RAW'
-        },
 
-        originalFileName: {
-            type: String,
-            required: true
-        },
-        mimeType: {
-            type: String,
-            required: true
-        },
-        sizeBytes: {
-            type: Number,
-            required: true
-        },
-        fileHash: {
-            type: String,
-            required: true
-        },
+        originalFileName: { type: String, required: true },
+        mimeType: { type: String, required: true },
+        sizeBytes: { type: Number, required: true },
+        fileHash: { type: String, required: true },
 
-        publicId: {
-            type: String,
-            required: true
-        },
-        secureUrl: {
-            type: String,
-            required: true
-        },
+        publicId: { type: String, required: true },
+        secureUrl: { type: String, required: true },
 
         status: {
             type: String,
@@ -94,17 +93,22 @@ const documentSchema = new Schema<IDocument>(
             index: true
         },
 
-        processingProgress: { type: Schema.Types.Mixed },
-        extractedData: { type: Schema.Types.Mixed },
+        // Pipeline data
+        sourceData: { type: Schema.Types.Mixed },
+        structuredData: { type: Schema.Types.Mixed },
+        validationResult: { type: Schema.Types.Mixed },
+        verifiedData: { type: Schema.Types.Mixed },
+
+        // Processing metadata
+        processingStartedAt: { type: Date },
+        processingCompletedAt: { type: Date },
+        processingError: { type: String },
 
         isDeleted: { type: Boolean, default: false }
     },
-    {
-        timestamps: true,
-    }
+    { timestamps: true }
 );
 
-// Compound index for finding duplicate files within the SAME organization
 documentSchema.index({ organizationId: 1, fileHash: 1 });
 
-export const DocumentModel = mongoose.model<IDocument>("Document", documentSchema)
+export const DocumentModel = mongoose.model<IDocument>("Document", documentSchema);

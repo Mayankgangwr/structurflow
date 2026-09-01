@@ -14,10 +14,18 @@ interface IProjectDetailsProps {
 
 
 const ProjectDetails: React.FC<IProjectDetailsProps> = ({ projectId }) => {
-    const { data, isLoading } = useGetProjectByIdQuery(projectId);
+    const { data: initialData } = useGetProjectByIdQuery(projectId);
+
+    // Poll the project query if its active template is currently processing
+    const isTemplateProcessing = initialData?.data?.templateData?.status === 'PROCESSING';
+
+    const { data, isLoading } = useGetProjectByIdQuery(projectId, {
+        pollingInterval: isTemplateProcessing ? 3000 : 0
+    });
+
     const { data: summaryData, isLoading: isSummaryLoading } = useGetDocumentsSummaryQuery({ projectId });
 
-    const projectResponse = data?.data;
+    const projectResponse = data?.data || initialData?.data;
     const hasDocuments = summaryData?.data?.TOTAL ? summaryData.data.TOTAL > 0 : false;
 
     if (isLoading) {

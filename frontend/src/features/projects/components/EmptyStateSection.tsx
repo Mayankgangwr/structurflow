@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Folders } from "lucide-react";
+import ProjectForm from "./ProjectForm";
 
 const EmptyStateSection: React.FC = () => {
+    const [isProjectFormOpen, setIsProjectFormOpen] = useState<boolean>(false);
     return (
         <div className="flex-1 flex items-center justify-center border border-border-subtle border-dashed rounded-xl bg-surface/50 backdrop-blur-sm p-xxl min-h-[400px]" >
             <div className="text-center flex flex-col items-center">
@@ -22,6 +24,7 @@ const EmptyStateSection: React.FC = () => {
                 <Button
                     className={`bg-primary !text-white hover:!text-white mb-md font-label-md hover:bg-primary-container transition-colors shrink-0`}
                     title={"New Project"}
+                    onClick={() => setIsProjectFormOpen(true)}
                 >
                     <div className="flex items-center gap-2">
                         <Plus className="h-5 w-5" />
@@ -33,6 +36,8 @@ const EmptyStateSection: React.FC = () => {
                     Learn more about Projects
                 </button>
             </div>
+            <ProjectForm isOpen={isProjectFormOpen} onClose={() => setIsProjectFormOpen(false)} />
+
         </div>
     )
 }

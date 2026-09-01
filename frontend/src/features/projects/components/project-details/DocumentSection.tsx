@@ -10,6 +10,7 @@ import DocumentView from "./DocumentView";
 import { Button } from "@base-ui/react/button";
 import PdfPreviewDialog from "@/components/documents/PdfPreviewDialog";
 import UploadTemplateForm from "@/features/templates/components/UploadTemplateForm";
+import TemplateSchemaDialog from "@/features/templates/components/TemplateSchemaDialog";
 
 export interface IDocumentSectionProps {
     activeTemplate: Template;
@@ -19,6 +20,7 @@ export interface IDocumentSectionProps {
 const DocumentSection: React.FC<IDocumentSectionProps> = ({ activeTemplate, hasDocuments }) => {
     const [isPreveiwTemplte, setIsPreveiwTemplte] = useState(false);
     const [isReplaceTemplate, setIsReplaceTemplate] = useState(false);
+    const [isSchemaViewerOpen, setIsSchemaViewerOpen] = useState(false);
 
 
     if (!activeTemplate) return null;
@@ -62,6 +64,14 @@ const DocumentSection: React.FC<IDocumentSectionProps> = ({ activeTemplate, hasD
                                 Status: {status || 'Ready'}
                             </span>
                             <div className="flex items-center gap-sm">
+                                {activeTemplate.targetSchema && (
+                                    <Button
+                                        onClick={() => setIsSchemaViewerOpen(true)}
+                                        className="text-primary hover:bg-primary-container/50 bg-primary/10 transition-colors flex items-center justify-center py-1 px-3 text-[12px] font-semibold rounded-md"
+                                        title="View Schema">
+                                        View Schema
+                                    </Button>
+                                )}
                                 <Button
                                     onClick={() => setIsPreveiwTemplte(true)}
                                     className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
@@ -100,6 +110,12 @@ const DocumentSection: React.FC<IDocumentSectionProps> = ({ activeTemplate, hasD
                     isOpen={isReplaceTemplate}
                     onClose={() => setIsReplaceTemplate(false)}
                     projectId={activeTemplate.projectId} />
+
+                <TemplateSchemaDialog
+                    isOpen={isSchemaViewerOpen}
+                    onClose={() => setIsSchemaViewerOpen(false)}
+                    template={activeTemplate}
+                />
             </div>
         </div >
     )
