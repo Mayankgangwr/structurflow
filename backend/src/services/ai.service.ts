@@ -200,7 +200,7 @@ class AIService {
                 finalHtml = finalHtml.replace('<!-- [SVG_BLOCK_REMOVED] -->', svg);
             }
             // base64 images/assets are handled by template.service.ts now, no need to restore here
-            
+
             const result: IAITemplateResult = {
                 templateHtml: finalHtml,
                 schema

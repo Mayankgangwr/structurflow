@@ -27,6 +27,7 @@ export interface IDocument extends MongooseDocument {
     status: DocumentStatus;
     processingProgress?: any; // To be expanded in Phase 4
     extractedData?: any;      // To be expanded in Phase 5
+    processingDetails?: any;  // Used to store AI output and extraction details
 
     isDeleted: boolean;
 
@@ -88,6 +89,7 @@ const documentSchema = new Schema<IDocument>(
 
         processingProgress: { type: Schema.Types.Mixed },
         extractedData: { type: Schema.Types.Mixed },
+        processingDetails: { type: Schema.Types.Mixed },
 
         isDeleted: { type: Boolean, default: false }
     },

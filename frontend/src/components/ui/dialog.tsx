@@ -14,9 +14,9 @@ interface DialogProps {
 
 const sizeClasses = {
   sm: "w-[100vw]",
-  md: "w-[90vw] max-w-[480px]",
-  lg: "w-[90vw] max-w-[640px]",
-  xl: "w-[90vw] max-w-[768px]",
+  md: "w-[90vw] max-w-[680px]",
+  lg: "w-[90vw] max-w-[720px]",
+  xl: "w-[90vw] max-w-[1024px]",
 };
 
 export function Dialog({

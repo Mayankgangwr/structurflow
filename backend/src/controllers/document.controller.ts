@@ -27,6 +27,18 @@ export const documentController = {
         return ok(res, results, "Documents uploaded successfully", 201);
     }),
 
+    process: asyncHandler(async (req: Request, res: Response) => {
+        const { documentId } = req.body;
+        const organizationId = req.headers['x-organization-id'] as string;
+
+        if (!documentId) throw ApiErrors.missingRequiredField('documentId');
+        if (!organizationId) throw ApiErrors.missingRequiredField('organizationId');
+
+        const result = await documentService.proccessDocument(documentId, organizationId);
+
+        return ok(res, result, "Document processed successfully");
+    }),
+
 
     list: asyncHandler(async (req: Request, res: Response) => {
         const page = parseInt(req.query.page as string) || 1;

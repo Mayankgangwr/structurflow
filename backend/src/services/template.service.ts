@@ -11,7 +11,9 @@ import { AuditAction } from "@/models/audit-log.model";
 import projectRepository from "@/repositories/project.repository";
 import pdfService from "./pdf.service";
 import aiService from "./ai.service";
-
+import extractPdfElements from "@/utils/extractPdfElements";
+import generatePdfFromTemplate from "@/utils/generatePdfFromTemplate";
+import * as fs from "fs";
 
 class TemplateService {
     /**
@@ -37,7 +39,7 @@ class TemplateService {
             try {
                 const buffer = Buffer.from(base64Data, 'base64');
                 const uploadResult = await storageService.uploadFile(buffer, folder, filename, mimeType);
-                
+
                 processedHtml = processedHtml.replace(fullMatch, uploadResult.secure_url);
             } catch (err) {
                 console.error('Failed to upload extracted image, keeping base64 format:', err);
@@ -51,6 +53,8 @@ class TemplateService {
 * Processes a direct file upload from the client.
 */
 
+
+
     async uploadTemplate(
         file: Express.Multer.File,
         organizationId: string,
@@ -58,7 +62,50 @@ class TemplateService {
         userId: string,
         ipAddress?: string
     ) {
-        // 1. Calculate SHA-256 hash of the file buffer
+
+
+        // 2. Actual Data JSON
+        const actualData = {
+            offer_letter_number: "SF-2026-9041",
+            offer_date: "03 September 2026",
+            candidate_id: "SF-EMP-1082",
+            joining_date: "15 September 2026",
+            candidate_name: "Rahul Sharma",
+            candidate_first_name: "Rahul",
+            candidate_address: "Flat 402, Green Glen Layout",
+            candidate_city: "Bengaluru",
+            candidate_state: "Karnataka",
+            candidate_postal_code: "560103",
+            job_title: "Senior Full Stack Engineer",
+            department_name: "Core Platform Engineering",
+            reporting_manager: "Priya Patel",
+            employment_type: "Permanent Full-Time",
+            work_location: "Bengaluru (Hybrid)",
+            base_salary_annual: "INR 22,00,000",
+            allowances_annual: "INR 4,00,000",
+            variable_pay_annual: "INR 2,50,000",
+            total_compensation_annual: "INR 28,50,000",
+            authorized_signatory_name: "Aman Gupta",
+            authorized_signatory_title: "Director of People Operations",
+            acceptance_date: "05 September 2026",
+            company_address: "Embassy TechVillage, Outer Ring Road, Bengaluru",
+            company_email: "people@structureflow.ai",
+            company_phone: "+91 80 4123 4567"
+        };
+
+        const templateElements = await extractPdfElements({ fileBuffer: file.buffer });
+
+        if (templateElements !== null) {
+            // 3. Generate PDF
+            const pdfBuffer = await generatePdfFromTemplate(templateElements, actualData, {
+                templatePdfBuffer: file.buffer
+            });
+            // A) Save to disk:
+            fs.writeFileSync("Generated_Offer_Letter.pdf", pdfBuffer);
+            console.log("Extract Pdf Elements: ", templateElements);
+            // 1. Calculate SHA-256 hash of the file buffer
+        }
+
         const fileHash = crypto.createHash('sha256').update(file.buffer).digest('hex');
 
         // 2. Check for exact duplicates in the same organization

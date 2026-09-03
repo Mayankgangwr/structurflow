@@ -1,12 +1,13 @@
 import React, { useState } from "react";
-import { Document, useGetDocumentsQuery } from "@/features/documents/documentApi";
+import { Document, useGetDocumentsQuery, useProcessDocumentMutation } from "@/features/documents/documentApi";
 import DataTable, { DataTableColumn } from "@/components/ui/data-table/DataTable";
 import { DataTablePagination } from "@/components/ui/data-table/DataTablePagination";
 import { cn, formatDate, formatSize, getFileType } from "@/lib/utils";
-import { Eye, FileText, FileDown, Sparkles, FileCheck, Trash2, Upload } from "lucide-react";
+import { Eye, FileText, FileDown, Sparkles, FileCheck, Trash2, Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import UploadDocumentsForm from "@/features/documents/components/UploadDocumentsForm";
 import PdfPreviewDialog from "@/components/documents/PdfPreviewDialog";
+import TransformedDocumentPreviewDialog from "@/features/documents/components/TransformedDocumentPreviewDialog";
 
 export interface IDocumentViewProps {
     projectId: string;
@@ -23,8 +24,16 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
     const [pageSize, setPageSize] = useState(10);
 
     const [previewDocument, setPreviewDocument] = useState<IPreviewDocument>({ data: null, isOpen: false });
+    const [previewTransformedDocument, setPreviewTransformedDocument] = useState<{ id: string | null, isOpen: boolean }>({ id: null, isOpen: false });
 
     const { data: queryData, isLoading } = useGetDocumentsQuery({ projectId, page, limit: pageSize });
+    const [
+        processDocumentMutation,
+        {
+            isLoading: isProcessing,
+            isError: isProcessingError,
+            error: processingError
+        }] = useProcessDocumentMutation();
 
     const documents = queryData?.data?.documents || [];
     const totalDocuments = queryData?.data?.total || 0;
@@ -43,6 +52,14 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
 
     const handleView = (id: string) => {
 
+    }
+
+    const handleProcessDocument = async (id: string) => {
+        try {
+            await processDocumentMutation({ documentId: id }).unwrap();
+        } catch (error) {
+            console.error("Error processing document:", error);
+        }
     }
 
     const documentColumns: DataTableColumn<Document>[] = [
@@ -134,8 +151,14 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
                             variant="outline"
                             title="Transform Document"
                             className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
-                            size={"icon-sm"}>
-                            <Sparkles className="h-5 w-5 text-primary/70 hover:text-primary" />
+                            size={"icon-sm"}
+                            onClick={() => handleProcessDocument(document._id)}
+                        >
+                            {isProcessing ? (
+                                <Loader2 className="h-5 w-5 text-primary/70 hover:text-primary animate-spin" />
+                            ) : (
+                                <Sparkles className="h-5 w-5 text-primary/70 hover:text-primary" />
+                            )}
                         </Button>
                     ) : document.status === 'REVIEW_REQUIRED' ? (
                         <Button
@@ -145,10 +168,11 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
                             size={"icon-sm"}>
                             <FileCheck className="h-5 w-5 text-primary/70 hover:text-primary" />
                         </Button>
-                    ) : document.status === "TRUSTED" && (
+                    ) : (document.status === "TRUSTED" || document.status === "TRANSFORMED") && (
                         <Button
                             variant="outline"
                             title="Export Document"
+                            onClick={() => setPreviewTransformedDocument({ id: document._id, isOpen: true })}
                             className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
                             size={"icon-sm"}>
                             <FileDown className="h-5 w-5 text-primary/70 hover:text-primary" />
@@ -214,6 +238,15 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
                     onClose={() => setPreviewDocument({ data: null, isOpen: false })}
                     pdfUrl={previewDocument.data?.secureUrl}
                     documentName={previewDocument.data?.originalFileName || previewDocument.data?.originalFilename}
+                />
+            )}
+
+            {/* Transformed Document Preview Dialog */}
+            {previewTransformedDocument.id && previewTransformedDocument.isOpen && (
+                <TransformedDocumentPreviewDialog
+                    documentId={previewTransformedDocument.id}
+                    isOpen={previewTransformedDocument.isOpen}
+                    onClose={() => setPreviewTransformedDocument({ id: null, isOpen: false })}
                 />
             )}
         </div>

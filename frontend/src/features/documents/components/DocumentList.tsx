@@ -35,18 +35,18 @@ const formatBytes = (bytes: number, decimals = 2) => {
 }
 
 interface DocumentListProps {
-  orgId: string;
+  projectId: string;
 }
 
-export const DocumentList = ({ orgId }: DocumentListProps) => {
-  const { data, isLoading, isError } = useGetDocumentsQuery({ orgId });
+export const DocumentList = ({ projectId }: DocumentListProps) => {
+  const { data, isLoading, isError } = useGetDocumentsQuery({ projectId: projectId });
 
   if (isLoading) return <div className="animate-pulse space-y-4">
     {[1, 2, 3].map(i => <div key={i} className="h-16 w-full rounded-xl bg-zinc-100 dark:bg-zinc-800/50"></div>)}
   </div>;
 
   if (isError) return <div className="text-red-500">Failed to load documents.</div>;
-  if (!data?.data || data.data.length === 0) return <div className="text-zinc-500 text-center py-8">No documents uploaded yet.</div>;
+  if (!data?.data || data.data.total === 0) return <div className="text-zinc-500 text-center py-8">No documents uploaded yet.</div>;
 
   return (
     <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">

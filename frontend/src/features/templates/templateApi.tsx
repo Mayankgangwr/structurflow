@@ -15,6 +15,8 @@ export interface Template {
     status: string;
     createdAt: string;
     updatedAt: string;
+    htmlContent?: string;
+    templateSchema?: any;
 }
 
 export const templateApi = baseApi.injectEndpoints({

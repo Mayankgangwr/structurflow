@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Eye, File, FileText, Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { Eye, File, FileText, Loader2, RefreshCw, Sparkles, LayoutTemplate } from "lucide-react";
 import { Template, useProccessTemplateMutation } from "@/features/templates/templateApi";
 import { formatDate, formatSize, getFileType } from "@/lib/utils";
 import UploadDocument from "./UploadDocument";
@@ -9,6 +9,7 @@ import DocumentsSummary from "./DocumentsSummary";
 import DocumentView from "./DocumentView";
 import { Button } from "@base-ui/react/button";
 import PdfPreviewDialog from "@/components/documents/PdfPreviewDialog";
+import HtmlPreviewDialog from "@/components/documents/HtmlPreviewDialog";
 import UploadTemplateForm from "@/features/templates/components/UploadTemplateForm";
 
 export interface IDocumentSectionProps {
@@ -18,6 +19,7 @@ export interface IDocumentSectionProps {
 
 const DocumentSection: React.FC<IDocumentSectionProps> = ({ activeTemplate, hasDocuments }) => {
     const [isPreveiwTemplte, setIsPreveiwTemplte] = useState(false);
+    const [isHtmlPreview, setIsHtmlPreview] = useState(false);
     const [proccessTemplateMutation, { isLoading, isError, error }] = useProccessTemplateMutation();
     const [isReplaceTemplate, setIsReplaceTemplate] = useState(false);
 
@@ -84,9 +86,17 @@ const DocumentSection: React.FC<IDocumentSectionProps> = ({ activeTemplate, hasD
                                 <Button
                                     onClick={() => setIsPreveiwTemplte(true)}
                                     className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
-                                    title="Preview">
+                                    title="Preview PDF">
                                     <Eye />
                                 </Button>
+                                {activeTemplate.htmlContent && (
+                                    <Button
+                                        onClick={() => setIsHtmlPreview(true)}
+                                        className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
+                                        title="Preview HTML">
+                                        <LayoutTemplate />
+                                    </Button>
+                                )}
                                 <Button
                                     className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
                                     title="Replace"
@@ -112,6 +122,14 @@ const DocumentSection: React.FC<IDocumentSectionProps> = ({ activeTemplate, hasD
                     isOpen={isPreveiwTemplte}
                     onClose={() => setIsPreveiwTemplte(false)}
                     pdfUrl={activeTemplate.secureUrl}
+                    documentName={activeTemplate.originalFileName}
+                />
+
+                {/* HTML Preveiw Dialog */}
+                <HtmlPreviewDialog
+                    isOpen={isHtmlPreview}
+                    onClose={() => setIsHtmlPreview(false)}
+                    htmlContent={activeTemplate.htmlContent}
                     documentName={activeTemplate.originalFileName}
                 />
 

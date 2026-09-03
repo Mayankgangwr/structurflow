@@ -9,6 +9,9 @@ import crypto from "crypto";
 import path from "path";
 import mongoose from "mongoose";
 import { v4 as uuidv4 } from "uuid";
+import pdfService from "./pdf.service";
+import templateService from "./template.service";
+import templateRepository from "@/repositories/template.repository";
 class DocumentService {
 
     /**
@@ -38,6 +41,12 @@ class DocumentService {
         // 4. Upload directly to Supabase Storage
         const uploadResult = await storageService.uploadFile(file.buffer, folder, filename, file.mimetype);
 
+        // Extract the text from the pdf doc
+        const rawText = await pdfService.extractTextFromPdf(file.buffer);
+
+        // Then you can store 'rawText' in your database!
+
+
         // 5. Persist Document and Audit Log (Without Transactions for standalone DB)
         try {
             const document = await documentRepository.create({
@@ -48,6 +57,7 @@ class DocumentService {
                 mimeType: file.mimetype,
                 sizeBytes: file.size,
                 fileHash,
+                extractedData: rawText,
                 publicId: uploadResult.public_id,
                 secureUrl: uploadResult.secure_url,
                 status: DocumentStatus.UPLOADED,
@@ -82,6 +92,30 @@ class DocumentService {
         }
     }
 
+    async proccessDocument(documentId: string, organizationId: string,) {
+        // Get document
+        const document = await documentRepository.findById(documentId);
+        if (!document) throw ApiErrors.documentNotFound();
+
+        // Get document's project
+        const activeTemplate = await templateRepository.activeTemplateByProject(document.projectId.toString(), organizationId);
+        if (!activeTemplate) throw ApiErrors.templateNotFound();
+
+        const extractedData = document.extractedData;
+        const schema = activeTemplate.templateSchema;
+
+        if (!extractedData || !schema) throw ApiErrors.documentNotFound();
+
+        const LLMResult = await pdfService.processPdfWithSchema(extractedData, schema);
+
+        await documentRepository.updateById(documentId, {
+            status: DocumentStatus.TRANSFORMED,
+            processingDetails: { aiResponse: LLMResult }
+        });
+
+        return LLMResult;
+    }
+
     async getDocumentsList(projectId: string, page = 1, limit = 50) {
         const skip = (page - 1) * limit;
 
@@ -93,7 +127,19 @@ class DocumentService {
         if (!document) throw ApiErrors.documentNotFound();
         const auditTrail = await auditLogRepository.findByDocument(documentId);
 
-        return { document, auditTrail }
+        let templateHtml = null;
+        if (document.projectId) {
+            const activeTemplate = await templateRepository.activeTemplateByProject(document.projectId.toString(), organizationId);
+            if (activeTemplate) {
+                templateHtml = activeTemplate.htmlContent || null;
+            }
+        }
+
+        return {
+            document,
+            auditTrail,
+            templateHtml
+        }
     }
 
     async deleteDocument(documentId: string, organizationId: string, userId: string) {

@@ -7,14 +7,16 @@ export interface Document {
     mimeType: string;
     secureUrl: string;
     sizeBytes: number;
-    status: 'UPLOADED' | 'PROCESSING' | 'REVIEW_REQUIRED' | 'TRUSTED' | 'REJECTED' | 'FAILED';
+    status: 'UPLOADED' | 'PROCESSING' | 'REVIEW_REQUIRED' | 'TRUSTED' | 'TRANSFORMED' | 'REJECTED' | 'FAILED';
     createdAt: string;
+    processingDetails?: any;
 }
 
 export interface DocumentDetailResponse {
     document: Document;
     auditTrail: any[];
     downloadUrl: string;
+    templateHtml?: string;
 }
 
 export const documentApi = baseApi.injectEndpoints({
@@ -67,6 +69,16 @@ export const documentApi = baseApi.injectEndpoints({
                 invalidatesTags: ['Documents'],
             }),
 
+        processDocument: builder.mutation<{ success: boolean; data: any }, { documentId: string }>({
+            query: ({ documentId }) => ({
+                url: `/documents/process`,
+                method: 'POST',
+                body: { documentId },
+            }),
+            invalidatesTags: ['Documents'],
+        }),
+
+
     }),
 });
 
@@ -74,5 +86,6 @@ export const {
     useGetDocumentsQuery,
     useGetDocumentsSummaryQuery,
     useGetDocumentByIdQuery,
-    useUploadDocumentMutation
+    useUploadDocumentMutation,
+    useProcessDocumentMutation
 } = documentApi;
