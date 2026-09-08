@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Document, useGetDocumentsQuery, useProcessDocumentMutation, useDeleteDocumentMutation } from "@/features/documents/documentApi";
 import DataTable, { DataTableColumn } from "@/components/ui/data-table/DataTable";
 import { DataTablePagination } from "@/components/ui/data-table/DataTablePagination";
@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import UploadDocumentsForm from "@/features/documents/components/UploadDocumentsForm";
 import PdfPreviewDialog from "@/components/documents/PdfPreviewDialog";
 import TransformedDocumentPreviewDialog from "@/features/documents/components/TransformedDocumentPreviewDialog";
+import DocumentToolbar from "@/features/documents/components/DocumentToolbar";
+import DocumentCard from "@/features/documents/components/DocumentCard";
 import { Dialog } from "@/components/ui/dialog";
 import toast from "react-hot-toast";
 
@@ -24,12 +26,43 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
     const [isUploadFormOpen, setIsUploadFormOpen] = useState<boolean>(false);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("ALL");
+    const [sortBy, setSortBy] = useState<"createdAt" | "name" | "size" | "status">("createdAt");
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+    const [viewMode, setViewMode] = useState<"table" | "grid">("table");
 
     const [previewDocument, setPreviewDocument] = useState<IPreviewDocument>({ data: null, isOpen: false });
     const [previewTransformedDocument, setPreviewTransformedDocument] = useState<{ id: string | null, isOpen: boolean }>({ id: null, isOpen: false });
     const [deletingDocument, setDeletingDocument] = useState<Document | null>(null);
 
-    const { data: queryData, isLoading } = useGetDocumentsQuery({ projectId, page, limit: pageSize });
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+
+    // Auto set viewMode to grid on mobile devices
+    useEffect(() => {
+        if (typeof window !== "undefined" && window.innerWidth < 640) {
+            setViewMode("grid");
+        }
+    }, []);
+
+    // Debounce search input by 300ms before querying backend
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 300);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
+
+    const { data: queryData, isLoading, isFetching } = useGetDocumentsQuery({
+        projectId,
+        page,
+        limit: pageSize,
+        search: debouncedSearchQuery,
+        status: statusFilter,
+        sortBy,
+        sortOrder,
+    });
+
     const [
         processDocumentMutation,
         {
@@ -41,12 +74,29 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
 
     const documents = queryData?.data?.documents || [];
     const totalDocuments = queryData?.data?.total || 0;
-
-    const totalPages = Math.ceil(totalDocuments / pageSize);
-    const startItem = (page - 1) * pageSize + 1;
+    const totalPages = queryData?.data?.totalPages || Math.ceil(totalDocuments / pageSize);
+    const startItem = totalDocuments === 0 ? 0 : (page - 1) * pageSize + 1;
     const endItem = Math.min(page * pageSize, totalDocuments);
 
-    if (!isLoading && documents.length === 0) {
+    const handleSort = (field: "createdAt" | "name" | "size" | "status") => {
+        if (sortBy === field) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+        } else {
+            setSortBy(field);
+            setSortOrder("desc");
+        }
+        setPage(1);
+    };
+
+    const handleResetFilters = () => {
+        setSearchQuery("");
+        setStatusFilter("ALL");
+        setSortBy("createdAt");
+        setSortOrder("desc");
+        setPage(1);
+    };
+
+    if (!isLoading && !isFetching && documents.length === 0 && !searchQuery && statusFilter === "ALL" && page === 1) {
         return null;
     }
 
@@ -214,20 +264,72 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
 
 
     return (
-        <div className="">
-            <div className="flex items-center justify-between mb-md">
+        <div className="w-full">
+            <div className="flex items-center justify-between mb-4">
                 <h3 className="font-headline-md text-headline-md text-text-primary">Documents Workspace</h3>
-                <Button onClick={() => setIsUploadFormOpen(true)} className={`bg-primary text-white! hover:text-white! font-label-md hover:bg-primary-container transition-colors shrink-0 py-2 px-4 text-label-md`}>
-                    <Upload className="w-4 h-4" /> Add Documents
+                <Button onClick={() => setIsUploadFormOpen(true)} className="bg-primary text-white! hover:text-white! font-label-md hover:bg-primary-container transition-colors shrink-0 py-2 px-4 text-label-md cursor-pointer">
+                    <Upload className="w-4 h-4 mr-1.5" /> Add Documents
                 </Button>
             </div>
-            <DataTable
-                data={documents}
-                columns={documentColumns}
-                getRowId={(document: Document) => document._id}
-                isLoading={isLoading}
-                emptyMessage="No documents found."
+
+            {/* Toolbar: Search, Filters, View Switcher */}
+            <DocumentToolbar
+                searchQuery={searchQuery}
+                onSearchChange={(query) => {
+                    setSearchQuery(query);
+                    setPage(1);
+                }}
+                statusFilter={statusFilter}
+                onStatusFilterChange={(status) => {
+                    setStatusFilter(status);
+                    setPage(1);
+                }}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onSortChange={handleSort}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                onResetFilters={handleResetFilters}
             />
+
+            {/* Document Content: Grid or Table View */}
+            <div className="mb-4">
+                {viewMode === "grid" ? (
+                    documents.length === 0 ? (
+                        <div className="bg-surface rounded-xl border border-border-subtle p-12 text-center text-secondary text-sm">
+                            {searchQuery || statusFilter !== "ALL"
+                                ? "No documents match your filter criteria."
+                                : "No documents found."}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {documents.map((doc) => (
+                                <DocumentCard
+                                    key={doc._id}
+                                    document={doc}
+                                    isProcessing={isProcessing}
+                                    onView={(d) => setPreviewDocument({ data: d, isOpen: true })}
+                                    onProcess={handleProcessDocument}
+                                    onVerifyOrExport={(id) => setPreviewTransformedDocument({ id, isOpen: true })}
+                                    onDelete={handleDelete}
+                                />
+                            ))}
+                        </div>
+                    )
+                ) : (
+                    <DataTable
+                        data={documents}
+                        columns={documentColumns}
+                        getRowId={(document: Document) => document._id}
+                        isLoading={isLoading || isFetching}
+                        emptyMessage={
+                            searchQuery || statusFilter !== "ALL"
+                                ? "No documents match your filter criteria."
+                                : "No documents found."
+                        }
+                    />
+                )}
+            </div>
 
             {totalDocuments >= pageSize && (
                 <DataTablePagination

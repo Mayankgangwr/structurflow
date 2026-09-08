@@ -39,8 +39,8 @@ export const FileUploadArea = ({ orgId, projectId, documentType = "RAW" }: FileU
 
     setIsUploading(true);
     try {
-      const res = await uploadDocument({ orgId, projectId, documentType, file }).unwrap();
-      if (res.data.warnings?.length > 0) {
+      const res = await uploadDocument({ projectId, files: [file] }).unwrap();
+      if (res?.data?.warnings?.length > 0) {
         toast.warning(res.data.warnings[0]);
       } else {
         toast.success('Document uploaded successfully');

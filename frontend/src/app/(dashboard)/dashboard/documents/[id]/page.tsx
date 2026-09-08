@@ -15,8 +15,8 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
   const activeOrganizationId = useAppSelector((state) => state.auth.activeOrganizationId);
 
   const { data, isLoading, isError } = useGetDocumentByIdQuery(
-    { orgId: activeOrganizationId!, docId: documentId },
-    { skip: !activeOrganizationId }
+    documentId,
+    { skip: !documentId }
   );
 
   if (isLoading) {
@@ -63,7 +63,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
         <div>
-          <Badge variant={document.status === 'UPLOADED' ? 'info' : 'default'} className="text-sm px-4 py-1">
+          <Badge variant={document.status === 'UPLOADED' ? 'secondary' : 'default'} className="text-sm px-4 py-1">
             {document.status}
           </Badge>
         </div>

@@ -22,13 +22,91 @@ export interface DocumentDetailResponse {
     templateHtml?: string;
 }
 
+export interface GetDocumentsParams {
+    projectId: string;
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    sortBy?: 'createdAt' | 'name' | 'size' | 'status';
+    sortOrder?: 'asc' | 'desc';
+}
+
+export interface GetAllDocumentsParams {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    projectId?: string;
+    sortBy?: 'createdAt' | 'name' | 'size' | 'status';
+    sortOrder?: 'asc' | 'desc';
+}
+
+export interface DocumentsResponseData {
+    documents: Document[];
+    total: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+}
+
+export interface OrganizationDocumentsResponseData {
+    documents: (Document & { projectId?: { _id: string; name: string } | string })[];
+    total: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+    stats?: {
+        total: number;
+        uploaded: number;
+        processing: number;
+        transformed: number;
+        verified: number;
+        needsVerification: number;
+        exported: number;
+        failed: number;
+    };
+}
+
 export const documentApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        getDocuments: builder.query<{ success: boolean; data: { documents: Document[], total: number } }, { projectId: string, page?: number, limit?: number }>({
-            query: ({ projectId, page = 1, limit = 10 }) => ({
-                url: `/documents/${projectId}?page=${page}&limit=${limit}`,
-                method: 'GET',
-            }),
+        getAllDocuments: builder.query<{ success: boolean; data: OrganizationDocumentsResponseData }, GetAllDocumentsParams | void>({
+            query: (params) => {
+                const queryParams = new URLSearchParams();
+                if (params) {
+                    if (params.page) queryParams.append('page', params.page.toString());
+                    if (params.limit) queryParams.append('limit', params.limit.toString());
+                    if (params.search && params.search.trim()) queryParams.append('search', params.search.trim());
+                    if (params.status && params.status !== 'ALL') queryParams.append('status', params.status);
+                    if (params.projectId && params.projectId !== 'ALL') queryParams.append('projectId', params.projectId);
+                    if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+                    if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+                }
+
+                const queryString = queryParams.toString();
+                return {
+                    url: `/documents${queryString ? `?${queryString}` : ''}`,
+                    method: 'GET',
+                };
+            },
+            providesTags: ['Documents'],
+        }),
+
+        getDocuments: builder.query<{ success: boolean; data: DocumentsResponseData }, GetDocumentsParams>({
+            query: ({ projectId, page = 1, limit = 10, search, status, sortBy, sortOrder }) => {
+                const params = new URLSearchParams();
+                params.append('page', page.toString());
+                params.append('limit', limit.toString());
+                if (search && search.trim()) params.append('search', search.trim());
+                if (status && status !== 'ALL') params.append('status', status);
+                if (sortBy) params.append('sortBy', sortBy);
+                if (sortOrder) params.append('sortOrder', sortOrder);
+
+                return {
+                    url: `/documents/${projectId}?${params.toString()}`,
+                    method: 'GET',
+                };
+            },
             providesTags: ['Documents'],
         }),
 
@@ -107,6 +185,24 @@ export const documentApi = baseApi.injectEndpoints({
             invalidatesTags: ['Documents'],
         }),
 
+        bulkVerifyDocuments: builder.mutation<{ success: boolean; data: { successful: string[]; failed: any[]; total: number } }, { documentIds: string[] }>({
+            query: ({ documentIds }) => ({
+                url: '/documents/bulk-verify',
+                method: 'POST',
+                body: { documentIds },
+            }),
+            invalidatesTags: ['Documents'],
+        }),
+
+        rejectDocument: builder.mutation<{ success: boolean; data: any }, { documentId: string; reason?: string }>({
+            query: ({ documentId, reason }) => ({
+                url: `/documents/reject/${documentId}`,
+                method: 'PUT',
+                body: { reason },
+            }),
+            invalidatesTags: ['Documents'],
+        }),
+
         deleteDocument: builder.mutation<{ success: boolean; data: any }, string>({
             query: (documentId) => ({
                 url: `/documents/${documentId}`,
@@ -118,6 +214,7 @@ export const documentApi = baseApi.injectEndpoints({
 });
 
 export const {
+    useGetAllDocumentsQuery,
     useGetDocumentsQuery,
     useGetDocumentPreviewQuery,
     useGetDocumentsSummaryQuery,
@@ -125,6 +222,8 @@ export const {
     useUploadDocumentMutation,
     useProcessDocumentMutation,
     useVerifyDocumentMutation,
+    useBulkVerifyDocumentsMutation,
+    useRejectDocumentMutation,
     useExportDocumentMutation,
     useDeleteDocumentMutation
 } = documentApi;

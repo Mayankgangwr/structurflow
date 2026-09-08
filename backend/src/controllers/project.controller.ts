@@ -23,9 +23,23 @@ export const projectController = {
         const orgId = req.headers['x-organization-id'] as string;
         if (!orgId) throw ApiErrors.orgIdRequired();
 
-        const projects = await projectService.getProjectsByOrg(orgId);
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+        const search = (req.query.search as string) || "";
+        const status = (req.query.status as string) || "ALL";
+        const sortBy = (req.query.sortBy as string) || "lastActivity";
+        const sortOrder = (req.query.sortOrder as string) === "asc" ? "asc" : "desc";
 
-        const formattedProjects = projects.map(p => ({
+        const result = await projectService.getProjectsByOrg(orgId, {
+            page,
+            limit,
+            search,
+            status,
+            sortBy,
+            sortOrder
+        });
+
+        const formattedProjects = result.projects.map((p: any) => ({
             id: p._id.toString(),
             name: p.name,
             description: p.description || "",
@@ -38,7 +52,19 @@ export const projectController = {
             activeTemplateId: p.templateDocumentId ? p.templateDocumentId.toString() : null
         }));
 
-        return ok(res, formattedProjects, "Projects fetched successfully");
+        return ok(res, {
+            projects: formattedProjects,
+            pagination: {
+                total: result.total,
+                page: result.page,
+                limit: result.limit,
+                totalPages: result.totalPages
+            },
+            meta: {
+                totalProjects: result.totalProjects,
+                totalPendingVerification: result.totalPendingVerification
+            }
+        }, "Projects fetched successfully");
     }),
 
     getById: asyncHandler(async (req: Request, res: Response) => {

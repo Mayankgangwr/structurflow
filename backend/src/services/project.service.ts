@@ -1,4 +1,4 @@
-import projectRepository from "@/repositories/project.repository";
+import projectRepository, { ProjectQueryOptions } from "@/repositories/project.repository";
 import { ApiErrors } from "@/utils/errors";
 import mongoose from "mongoose";
 
@@ -13,8 +13,8 @@ class ProjectService {
         return project;
     }
 
-    async getProjectsByOrg(organizationId: string) {
-        return await projectRepository.findByOrg(organizationId);
+    async getProjectsByOrg(organizationId: string, options: ProjectQueryOptions = {}) {
+        return await projectRepository.findByOrg(organizationId, options);
     }
 
     async getById(id: string) {

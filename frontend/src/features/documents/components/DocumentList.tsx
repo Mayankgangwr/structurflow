@@ -10,10 +10,10 @@ import { formatDistanceToNow } from 'date-fns';
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case 'UPLOADED': return <Badge variant="info">Uploaded</Badge>;
-    case 'PROCESSING': return <Badge variant="warning">Processing...</Badge>;
+    case 'UPLOADED': return <Badge variant="secondary">Uploaded</Badge>;
+    case 'PROCESSING': return <Badge variant="outline">Processing...</Badge>;
     case 'REVIEW_REQUIRED': return <Badge variant="secondary">Review Required</Badge>;
-    case 'TRUSTED': return <Badge variant="success">Trusted</Badge>;
+    case 'TRUSTED': return <Badge variant="default">Trusted</Badge>;
     case 'REJECTED': return <Badge variant="destructive">Rejected</Badge>;
     case 'FAILED': return <Badge variant="destructive">Failed</Badge>;
     default: return <Badge variant="outline">{status}</Badge>;
@@ -62,7 +62,7 @@ export const DocumentList = ({ projectId }: DocumentListProps) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-            {data.data.map((doc) => (
+            {data.data.documents.map((doc: any) => (
               <tr key={doc._id} className="group hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">

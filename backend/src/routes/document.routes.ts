@@ -12,6 +12,7 @@ documentRoutes.use(requireAuth);
 documentRoutes.post('/', uploadMiddleware.array('files', 10), documentController.upload);
 documentRoutes.post('/process', documentController.process);
 
+documentRoutes.get('/', documentController.listAll);
 documentRoutes.get('/transform-preview/:id', documentController.transformedDocumentPreview);
 documentRoutes.put('/export/:id', documentController.updateStatus);
 
@@ -20,6 +21,8 @@ documentRoutes.get('/detail/:id', documentController.getOne);
 documentRoutes.get('/:projectId', documentController.list);
 
 documentRoutes.put('/verify/:id', documentController.verifyDocument);
+documentRoutes.post('/bulk-verify', documentController.bulkVerify);
+documentRoutes.put('/reject/:id', documentController.reject);
 documentRoutes.delete('/:id', documentController.delete);
 
 

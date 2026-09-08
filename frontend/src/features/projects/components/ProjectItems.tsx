@@ -1,38 +1,93 @@
-import React, { useState } from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import DataTable, { DataTableColumn } from "@/components/ui/data-table/DataTable";
-import { Folder, TriangleAlert, MoreVertical, Eye, Edit2, Trash2 } from "lucide-react";
+import {
+    Folder,
+    TriangleAlert,
+    Edit2,
+    Trash2
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataTablePagination } from "@/components/ui/data-table/DataTablePagination";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ProjectForm from "./ProjectForm";
 import DeleteConformationDialog from "./DeleteConformationDialog";
+import ProjectCard from "./ProjectCard";
+import ProjectToolbar from "./ProjectToolbar";
+import EmptyStateSection from "./EmptyStateSection";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
-import { Project, useDeleteProjectMutation } from "../projectApi";
+import { Project, useDeleteProjectMutation, useGetProjectsQuery } from "../projectApi";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
 export interface IProjectItems {
-    projects: Project[];
+    projects?: Project[];
 }
 
-const ProjectItems: React.FC<IProjectItems> = ({ projects }) => {
+const ProjectItems: React.FC<IProjectItems> = () => {
     const router = useRouter();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-    const totalProjects = projects.length;
+    const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("ALL");
+    const [sortBy, setSortBy] = useState<"lastActivity" | "name" | "documents" | "needsVerification" | "successRate">("lastActivity");
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+    const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+
     const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
     const [isDeleteDialogVisible, setIsDeleteDialogVisible] = useState(false);
     const [currentProject, setCurrentProject] = useState<Project | null>(null);
     const { activeOrganizationId } = useSelector((state: RootState) => state.auth);
 
-    const [deleteProject, { isLoading }] = useDeleteProjectMutation();
-    const paginatedProjects = projects.slice((page - 1) * pageSize, page * pageSize);
+    // Default to grid view on mobile devices
+    useEffect(() => {
+        if (typeof window !== "undefined" && window.innerWidth < 640) {
+            setViewMode("grid");
+        }
+    }, []);
 
-    const totalPages = Math.ceil(totalProjects / pageSize);
+    // Debounce search query by 300ms
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 300);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
 
-    const startItem = (page - 1) * pageSize + 1;
+    // Fetch projects with server-side query params
+    const { data: projectsData, isLoading, isFetching, isError, refetch } = useGetProjectsQuery(
+        {
+            page,
+            limit: pageSize,
+            search: debouncedSearchQuery,
+            status: statusFilter,
+            sortBy,
+            sortOrder
+        },
+        { skip: !activeOrganizationId }
+    );
 
+    const [deleteProject] = useDeleteProjectMutation();
+
+    const handleSort = (field: "lastActivity" | "name" | "documents" | "needsVerification" | "successRate") => {
+        if (sortBy === field) {
+            setSortOrder(prev => prev === "asc" ? "desc" : "asc");
+        } else {
+            setSortBy(field);
+            setSortOrder(field === "name" ? "asc" : "desc");
+        }
+        setPage(1);
+    };
+
+    const projects = projectsData?.data?.projects || [];
+    const pagination = projectsData?.data?.pagination;
+    const meta = projectsData?.data?.meta;
+
+    const totalProjects = pagination?.total ?? 0;
+    const totalPages = pagination?.totalPages ?? 1;
+    const startItem = totalProjects === 0 ? 0 : (page - 1) * pageSize + 1;
     const endItem = Math.min(page * pageSize, totalProjects);
 
     const handleEdit = (project: Project) => {
@@ -43,13 +98,13 @@ const ProjectItems: React.FC<IProjectItems> = ({ projects }) => {
     const handleOpenDeleteDialog = (projectId: string) => {
         setIsDeleteDialogVisible(true);
         setCurrentProject(projects.find((p) => p.id === projectId) || null);
-    }
+    };
 
     const handleDelete = async (projectId: string) => {
         await deleteProject(projectId).unwrap();
         setIsDeleteDialogVisible(false);
         setCurrentProject(null);
-    }
+    };
 
     const handleClose = () => {
         setIsProjectFormOpen(false);
@@ -59,9 +114,9 @@ const ProjectItems: React.FC<IProjectItems> = ({ projects }) => {
 
     const projectColumns: DataTableColumn<Project>[] = [
         {
-            id: "project",
+            id: "name",
             header: "Project",
-            cell: (project: Project) => (
+            cell: (project) => (
                 <div className="flex items-center gap-3 cursor-pointer hover:bg-surface-container-low p-1" onClick={() => router.push(`/project/${project.id}`)}>
                     <div
                         className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
@@ -122,7 +177,6 @@ const ProjectItems: React.FC<IProjectItems> = ({ projects }) => {
         {
             id: "lastActivity",
             header: "Last Activity",
-
             cell: (project) => (
                 <span className="text-secondary">
                     {project.lastActivity}
@@ -142,7 +196,7 @@ const ProjectItems: React.FC<IProjectItems> = ({ projects }) => {
                             e.stopPropagation();
                             handleOpenDeleteDialog(project.id);
                         }}
-                        className="text-error hover:text-error  transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
+                        className="text-error hover:text-error transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
                         size={"icon-sm"}>
                         <Trash2 className="h-5 w-5 text-error/70 hover:text-error" />
                     </Button>
@@ -150,7 +204,7 @@ const ProjectItems: React.FC<IProjectItems> = ({ projects }) => {
                         variant="outline"
                         onClick={(e) => {
                             e.stopPropagation();
-                            handleEdit(project)
+                            handleEdit(project);
                         }}
                         className="text-primary/70 hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
                         size={"icon-sm"}>
@@ -161,30 +215,107 @@ const ProjectItems: React.FC<IProjectItems> = ({ projects }) => {
         },
     ];
 
+    if (isLoading) {
+        return (
+            <div className="bg-surface rounded-xl border border-border-subtle p-12 text-center text-secondary">
+                Loading projects...
+            </div>
+        );
+    }
+
+    if (isError) {
+        return (
+            <div className="bg-surface rounded-xl border border-border-subtle p-12 text-center flex flex-col items-center gap-4">
+                <p className="text-error">Failed to load projects. Please try again.</p>
+                <button
+                    onClick={() => refetch()}
+                    className="px-4 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary/90 transition-colors cursor-pointer"
+                >
+                    Retry
+                </button>
+            </div>
+        );
+    }
+
+    // If organisation has 0 projects in total, show the empty state
+    if (!isLoading && meta && meta.totalProjects === 0) {
+        return <EmptyStateSection />;
+    }
+
     return (
         <>
-            <div className="">
-                <DataTable
-                    data={paginatedProjects}
-                    columns={projectColumns}
-                    getRowId={(project: Project) => project.id}
-                    isLoading={false}
-                    emptyMessage="No projects found."
-                />
-                <DataTablePagination
-                    page={page}
-                    pageSize={pageSize}
-                    total={totalProjects}
-                    totalPages={totalPages}
-                    startItem={startItem}
-                    endItem={endItem}
-                    onPageChange={setPage}
-                    onPageSizeChange={(size) => {
-                        setPageSize(size);
+            <div className="w-full">
+                {/* Search Box, Filter Controls & View Switcher Bar */}
+                <ProjectToolbar
+                    searchQuery={searchQuery}
+                    onSearchChange={(query) => {
+                        setSearchQuery(query);
+                        setPage(1);
+                    }}
+                    statusFilter={statusFilter}
+                    onStatusFilterChange={(status) => {
+                        setStatusFilter(status);
+                        setPage(1);
+                    }}
+                    onSortChange={handleSort}
+                    viewMode={viewMode}
+                    onViewModeChange={setViewMode}
+                    onResetFilters={() => {
+                        setStatusFilter("ALL");
+                        setSearchQuery("");
                         setPage(1);
                     }}
                 />
 
+                {/* Content: Grid View or Data Table View */}
+                <div className="mb-6">
+                    {viewMode === "grid" ? (
+                        projects.length === 0 ? (
+                            <div className="bg-surface rounded-xl border border-border-subtle p-12 text-center text-secondary">
+                                No projects match your filter criteria.
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                                {projects.map((project) => (
+                                    <ProjectCard
+                                        key={project.id}
+                                        project={project}
+                                        onEdit={handleEdit}
+                                        onDelete={handleOpenDeleteDialog}
+                                    />
+                                ))}
+                            </div>
+                        )
+                    ) : (
+                        <DataTable
+                            data={projects}
+                            columns={projectColumns}
+                            getRowId={(project: Project) => project.id}
+                            isLoading={isFetching}
+                            emptyMessage={
+                                searchQuery || statusFilter !== "ALL"
+                                    ? "No projects match your filter criteria."
+                                    : "No projects found."
+                            }
+                        />
+                    )}
+                </div>
+
+                <div className="pb-10">
+                    <DataTablePagination
+                        page={page}
+                        pageSize={pageSize}
+                        total={totalProjects}
+                        totalPages={totalPages}
+                        startItem={startItem}
+                        endItem={endItem}
+                        onPageChange={setPage}
+                        onPageSizeChange={(size) => {
+                            setPageSize(size);
+                            setPage(1);
+                        }}
+                    />
+                </div>
             </div>
 
             {currentProject && isDeleteDialogVisible && (
@@ -202,8 +333,8 @@ const ProjectItems: React.FC<IProjectItems> = ({ projects }) => {
                     project={currentProject}
                 />
             )}
-
         </>
-    )
-}
-export default ProjectItems
+    );
+};
+
+export default ProjectItems;

@@ -2,20 +2,32 @@ import React, { useRef, useState } from "react";
 import { useUploadDocument } from "../hooks/useUploadDocument";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Loader2, Upload, FileIcon, FileText, Image as ImageIcon, CheckCircle, Trash2 } from "lucide-react";
+import { Loader2, Upload, FileIcon, FileText, Image as ImageIcon, CheckCircle, Trash2, AlertCircle } from "lucide-react";
 import { formatSize } from "@/lib/utils";
+import Link from "next/link";
 
 export interface IUploadDocumentsFormProps {
-    projectId: string;
+    projectId?: string;
+    projects?: { id: string; name: string }[];
     isOpen: boolean;
     onClose: () => void;
 }
 
-const UploadDocumentsForm: React.FC<IUploadDocumentsFormProps> = ({ projectId, isOpen, onClose }) => {
-    const { uploadFiles, isLoading, isError, error } = useUploadDocument(projectId);
+const UploadDocumentsForm: React.FC<IUploadDocumentsFormProps> = ({ projectId, projects, isOpen, onClose }) => {
+    const [selectedProjectId, setSelectedProjectId] = useState<string>(projectId || (projects?.[0]?.id ?? ""));
+    const { uploadFiles, isLoading, isError, error } = useUploadDocument(selectedProjectId);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Sync selectedProjectId if projectId or projects change
+    React.useEffect(() => {
+        if (projectId) {
+            setSelectedProjectId(projectId);
+        } else if (projects && projects.length > 0 && !selectedProjectId) {
+            setSelectedProjectId(projects[0].id);
+        }
+    }, [projectId, projects, selectedProjectId]);
 
     // Reset state when modal closes
     React.useEffect(() => {
@@ -88,7 +100,7 @@ const UploadDocumentsForm: React.FC<IUploadDocumentsFormProps> = ({ projectId, i
                     </Button>
                     <Button 
                         onClick={handleUploadSubmit}
-                        disabled={isLoading || selectedFiles.length === 0} 
+                        disabled={isLoading || selectedFiles.length === 0 || (!projectId && (!projects || projects.length === 0))} 
                         className="w-full sm:w-auto bg-primary text-white hover:bg-primary-container font-label-md"
                     >
                         {isLoading ? (
@@ -101,15 +113,72 @@ const UploadDocumentsForm: React.FC<IUploadDocumentsFormProps> = ({ projectId, i
             }
         >
             <div className="py-2 flex flex-col">
+                {/* Target Project Selector / Zero-Project Guard */}
+                {!projectId && (!projects || projects.length === 0) ? (
+                    <div className="mb-3.5 p-3.5 rounded-lg bg-amber-50 border border-amber-200/80 flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                            <p className="text-xs font-semibold text-amber-900">
+                                No projects found
+                            </p>
+                            <p className="text-xs text-amber-700 mt-0.5">
+                                Please create a project before uploading documents. Documents must belong to a project to apply an extraction template.
+                            </p>
+                            <Link
+                                href="/project"
+                                onClick={onClose}
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-amber-900 hover:text-amber-950 underline mt-2"
+                            >
+                                Go to Projects to create one &rarr;
+                            </Link>
+                        </div>
+                    </div>
+                ) : !projectId && projects && projects.length > 0 ? (
+                    <div className="mb-3">
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-semibold text-slate-700">
+                                Target Project <span className="text-red-500">*</span>
+                            </label>
+                            <span className="text-[11px] text-slate-400">
+                                Assigned extraction template will be applied
+                            </span>
+                        </div>
+                        <select
+                            value={selectedProjectId}
+                            onChange={(e) => setSelectedProjectId(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
+                        >
+                            {projects.map((proj) => (
+                                <option key={proj.id} value={proj.id}>
+                                    {proj.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                ) : null}
+
                 {/* Drag and Drop Zone */}
                 <div
                     className={`flex-shrink-0 w-full border-2 border-dashed rounded-xl p-sm flex flex-col items-center justify-center text-center gap-xs transition-all cursor-pointer group min-h-40 ${
-                        isDragging ? 'border-primary bg-primary/10' : 'border-primary/40 bg-primary/2 hover:border-primary hover:bg-primary/5'
+                        !projectId && (!projects || projects.length === 0)
+                            ? 'border-slate-200 bg-slate-50 cursor-not-allowed opacity-60'
+                            : isDragging
+                                ? 'border-primary bg-primary/10'
+                                : 'border-primary/40 bg-primary/2 hover:border-primary hover:bg-primary/5'
                     }`}
-                    onDragOver={handleDragOver}
+                    onDragOver={(e) => {
+                        if (!projectId && (!projects || projects.length === 0)) return;
+                        handleDragOver(e);
+                    }}
                     onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
+                    onDrop={(e) => {
+                        if (!projectId && (!projects || projects.length === 0)) return;
+                        handleDrop(e);
+                    }}
+                    onClick={() => {
+                        if (!projectId && (!projects || projects.length === 0)) return;
+                        fileInputRef.current?.click();
+                    }}
                 >
                     <input
                         type="file"

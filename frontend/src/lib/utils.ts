@@ -19,25 +19,46 @@ export function getPageDetails(pathname: string): { title: string, description: 
       description: 'Manage and organize your processing workflows.'
     };
   }
-
+  if (pathname.startsWith('/verification')) {
+    return {
+      title: 'Verification Queue',
+      description: 'Review and verify transformed documents requiring human inspection.'
+    };
+  }
   if (pathname.startsWith('/documents')) {
     return {
       title: 'Documents',
-      description: 'View and manage all your processed documents.'
+      description: 'Explore and search all documents across your projects.'
     };
   }
-
+  if (pathname.startsWith('/analytics')) {
+    return {
+      title: 'Analytics',
+      description: 'Insights on processing throughput, extraction accuracy, and performance.'
+    };
+  }
+  if (pathname.startsWith('/activity')) {
+    return {
+      title: 'Activity Log',
+      description: 'Comprehensive audit trail of all document actions and status changes.'
+    };
+  }
   if (pathname.startsWith('/team')) {
     return {
-      title: 'Team',
-      description: 'Manage your organization members and roles.'
+      title: 'Team Management',
+      description: 'Manage organization members, invitations, and permissions.'
     };
   }
-
   if (pathname.startsWith('/settings')) {
     return {
       title: 'Settings',
       description: 'Configure your organization and personal preferences.'
+    };
+  }
+  if (pathname.startsWith('/support')) {
+    return {
+      title: 'Support & Docs',
+      description: 'Find guides, API reference, or get help with your workflows.'
     };
   }
 

@@ -62,13 +62,72 @@ export const documentController = {
         return ok(res, result, "Document verified successfully");
     }),
 
+    bulkVerify: asyncHandler(async (req: Request, res: Response) => {
+        const { documentIds } = req.body;
+        const organizationId = req.headers['x-organization-id'] as string;
+
+        if (!organizationId) throw ApiErrors.orgIdRequired();
+        if (!documentIds || !Array.isArray(documentIds)) throw ApiErrors.missingRequiredField('documentIds array');
+
+        const result = await documentService.bulkVerifyDocuments(documentIds, organizationId, req.user?._id);
+        return ok(res, result, "Bulk verification completed");
+    }),
+
+    reject: asyncHandler(async (req: Request, res: Response) => {
+        const documentId = req.params.id as string;
+        const organizationId = req.headers['x-organization-id'] as string;
+        const { reason } = req.body;
+
+        if (!documentId) throw ApiErrors.missingRequiredField('documentId');
+        if (!organizationId) throw ApiErrors.orgIdRequired();
+
+        const result = await documentService.rejectDocument(documentId, organizationId, reason, req.user?._id);
+        return ok(res, result, "Document rejected successfully");
+    }),
+
     list: asyncHandler(async (req: Request, res: Response) => {
         const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 50;
+        const limit = parseInt(req.query.limit as string) || 10;
+        const search = req.query.search as string;
+        const status = req.query.status as string;
+        const sortBy = req.query.sortBy as string;
+        const sortOrder = (req.query.sortOrder as string) === 'asc' ? 'asc' : 'desc';
         const projectId = req.params.projectId as string;
 
-        const result = await documentService.getDocumentsList(projectId, page, limit);
+        const result = await documentService.getDocumentsList(projectId, {
+            page,
+            limit,
+            search,
+            status,
+            sortBy,
+            sortOrder,
+        });
+
         return ok(res, result, "Documents fetched successfully");
+    }),
+
+    listAll: asyncHandler(async (req: Request, res: Response) => {
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+        const search = req.query.search as string;
+        const status = req.query.status as string;
+        const projectId = req.query.projectId as string;
+        const sortBy = req.query.sortBy as string;
+        const sortOrder = (req.query.sortOrder as string) === 'asc' ? 'asc' : 'desc';
+        const orgId = req.headers['x-organization-id'] as string;
+        if (!orgId) throw ApiErrors.orgIdRequired();
+
+        const result = await documentService.getOrganizationDocuments(orgId, {
+            page,
+            limit,
+            search,
+            status,
+            projectId,
+            sortBy,
+            sortOrder,
+        });
+
+        return ok(res, result, "Organization documents fetched successfully");
     }),
 
     summary: asyncHandler(async (req: Request, res: Response) => {

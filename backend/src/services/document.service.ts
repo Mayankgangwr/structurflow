@@ -2,7 +2,7 @@ import { storageService } from "@/integrations/storage.service";
 import { AuditAction } from "@/models/audit-log.model";
 import { DocumentStatus } from "@/models/document.model";
 import auditLogRepository from "@/repositories/audit-log.repository";
-import documentRepository from "@/repositories/document.repository";
+import documentRepository, { DocumentQueryOptions } from "@/repositories/document.repository";
 import { ApiErrors, DomainError } from "@/utils/errors";
 import crypto from "crypto";
 import path from "path";
@@ -213,10 +213,22 @@ class DocumentService {
         return { url: previewPdf, status: document.status };
     }
 
-    async getDocumentsList(projectId: string, page = 1, limit = 50) {
-        const skip = (page - 1) * limit;
+    async getDocumentsList(
+        projectId: string,
+        optionsOrPage: DocumentQueryOptions | number = 1,
+        limitArg?: number
+    ) {
+        if (typeof optionsOrPage === 'number') {
+            return await documentRepository.findAllByProject(projectId, {
+                page: optionsOrPage,
+                limit: limitArg || 10
+            });
+        }
+        return await documentRepository.findAllByProject(projectId, optionsOrPage);
+    }
 
-        return await documentRepository.findAllByProject(projectId, limit, skip);
+    async getOrganizationDocuments(organizationId: string, options: DocumentQueryOptions = {}) {
+        return await documentRepository.findAllByOrganization(organizationId, options);
     }
 
     async getDocumentDetails(documentId: string, organizationId: string) {
@@ -237,6 +249,50 @@ class DocumentService {
             auditTrail,
             templateHtml
         }
+    }
+
+    async bulkVerifyDocuments(documentIds: string[], organizationId: string, userId?: string) {
+        if (!documentIds || !Array.isArray(documentIds) || documentIds.length === 0) {
+            throw ApiErrors.badRequest("Please provide an array of document IDs to verify.");
+        }
+
+        const successful: string[] = [];
+        const failed: { id: string; error: string }[] = [];
+
+        await Promise.allSettled(
+            documentIds.map(async (id) => {
+                try {
+                    await this.verifyDocument(id, organizationId, userId);
+                    successful.push(id);
+                } catch (err: any) {
+                    failed.push({
+                        id,
+                        error: err?.message || "Verification failed"
+                    });
+                }
+            })
+        );
+
+        return { successful, failed, total: documentIds.length };
+    }
+
+    async rejectDocument(documentId: string, organizationId: string, reason?: string, userId?: string) {
+        const document = await documentRepository.findByIdAndOrg(documentId, organizationId);
+        if (!document) throw ApiErrors.documentNotFound();
+
+        await documentRepository.updateById(documentId, { status: DocumentStatus.REJECTED });
+        await auditLogRepository.create({
+            organizationId: new mongoose.Types.ObjectId(organizationId),
+            actorId: new mongoose.Types.ObjectId(userId || document.uploadedById),
+            documentId: document._id as mongoose.Types.ObjectId,
+            action: AuditAction.DOCUMENT_REJECTED,
+            details: {
+                filename: document.originalFileName,
+                reason: reason || "Rejected by reviewer during verification"
+            }
+        });
+
+        return { success: true, documentId, status: DocumentStatus.REJECTED };
     }
 
     async updateDocumentStatus(documentId: string, organizationId: string, status: DocumentStatus, userId?: string) {
