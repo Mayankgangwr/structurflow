@@ -3,21 +3,21 @@ import { AuditAction } from "@/models/audit-log.model";
 import { DocumentStatus } from "@/models/document.model";
 import auditLogRepository from "@/repositories/audit-log.repository";
 import documentRepository from "@/repositories/document.repository";
-import projectRepository from "@/repositories/project.repository";
 import { ApiErrors, DomainError } from "@/utils/errors";
 import crypto from "crypto";
 import path from "path";
 import mongoose from "mongoose";
 import { v4 as uuidv4 } from "uuid";
 import pdfService from "./pdf.service";
-import templateService from "./template.service";
 import templateRepository from "@/repositories/template.repository";
+import generatePdfFromTemplate from "@/utils/generatePdfFromTemplate";
+import getPdfBufferFromUrl from "./getPdfBufferFromUrl";
+
 class DocumentService {
 
     /**
     * Processes a direct file upload from the client.
     */
-
     async uploadDocument(
         file: Express.Multer.File,
         organizationId: string,
@@ -106,7 +106,7 @@ class DocumentService {
 
         if (!extractedData || !schema) throw ApiErrors.documentNotFound();
 
-        const LLMResult = await pdfService.processPdfWithSchema(extractedData, schema);
+        const LLMResult = await pdfService.processPdfWithSchema(extractedData, schema.fields);
 
         await documentRepository.updateById(documentId, {
             status: DocumentStatus.TRANSFORMED,
@@ -114,6 +114,103 @@ class DocumentService {
         });
 
         return LLMResult;
+    }
+
+    async verifyDocument(documentId: string, organizationId: string, userId?: string) {
+        const document = await documentRepository.findByIdAndOrg(documentId, organizationId);
+        if (!document) {
+            throw ApiErrors.documentNotFound();
+        }
+
+        // If already verified or exported and secureUrl already exists, return it directly
+        if (
+            (document.status === DocumentStatus.VERIFIED || document.status === DocumentStatus.EXPORTED) &&
+            document.processingDetails?.secureUrl
+        ) {
+            return document.processingDetails.secureUrl;
+        }
+
+        // Extracted data must exist to generate the verified document
+        if (!document.processingDetails?.aiResponse?.data) {
+            if (document.status === DocumentStatus.UPLOADED) {
+                throw ApiErrors.badRequest("Document has not been processed yet. Please transform the document first.");
+            }
+            throw ApiErrors.badRequest(`Document cannot be verified because extracted data is missing (current status: ${document.status}).`);
+        }
+
+        // 1. Get document's project active template
+        const activeTemplate = await templateRepository.activeTemplateByProject(document.projectId.toString(), organizationId);
+        if (!activeTemplate || !activeTemplate.extractedElements) throw ApiErrors.templateNotFound();
+
+        // 2. Generate the buffer
+        const templatePdfBuffer = await getPdfBufferFromUrl(activeTemplate.secureUrl);
+
+        // 3. Generate PDF
+        const pdfBuffer = await generatePdfFromTemplate(activeTemplate.extractedElements, document.processingDetails.aiResponse.data, {
+            templatePdfBuffer: templatePdfBuffer
+        });
+
+        // 4. Define Local Folder and Filename
+        const folder = `structurflow/transformed/${organizationId}`;
+        const filename = `${uuidv4()}.pdf`;
+
+        // 5. Upload directly to Supabase Storage
+        const uploadResult = await storageService.uploadFile(pdfBuffer, folder, filename, 'application/pdf');
+
+        // 6. Update the document with verified status and secure url while preserving processingDetails
+        await documentRepository.updateById(documentId, {
+            status: DocumentStatus.VERIFIED,
+            processingDetails: {
+                ...document.processingDetails,
+                publicId: uploadResult.public_id,
+                secureUrl: uploadResult.secure_url,
+            }
+        });
+
+        // 7. Log audit trail
+        await auditLogRepository.create({
+            organizationId: new mongoose.Types.ObjectId(organizationId),
+            actorId: new mongoose.Types.ObjectId(userId || document.uploadedById),
+            documentId: document._id as mongoose.Types.ObjectId,
+            action: AuditAction.DOCUMENT_VERIFIED,
+            details: {
+                filename: document.originalFileName,
+                url: uploadResult.secure_url
+            }
+        });
+
+        // 8. Return the secure url
+        return uploadResult.secure_url;
+    }
+
+    async getTransformedDocumentPreview(documentId: string, organizationId: string) {
+        const document = await documentRepository.findByIdAndOrg(documentId, organizationId);
+        if (!document) throw ApiErrors.documentNotFound();
+
+        if ((document.status === DocumentStatus.VERIFIED || document.status === DocumentStatus.EXPORTED) && document.processingDetails?.secureUrl) {
+            return { url: document.processingDetails.secureUrl, status: document.status };
+        }
+
+        if (!document.processingDetails?.aiResponse?.data) {
+            throw ApiErrors.badRequest("Document has not been processed yet.");
+        }
+
+        // 1. Get document's project
+        const activeTemplate = await templateRepository.activeTemplateByProject(document.projectId.toString(), organizationId);
+        if (!activeTemplate || !activeTemplate.extractedElements) throw ApiErrors.templateNotFound();
+
+        // 2. Generate the buffer
+        const templatePdfBuffer = await getPdfBufferFromUrl(activeTemplate.secureUrl);
+
+        // 3. Generate PDF
+        const pdfBuffer = await generatePdfFromTemplate(activeTemplate.extractedElements, document.processingDetails.aiResponse.data, {
+            templatePdfBuffer: templatePdfBuffer
+        });
+
+        // Convert Buffer to a base64 Data URL
+        const previewPdf = `data:application/pdf;base64,${pdfBuffer.toString("base64")}`;
+
+        return { url: previewPdf, status: document.status };
     }
 
     async getDocumentsList(projectId: string, page = 1, limit = 50) {
@@ -140,6 +237,28 @@ class DocumentService {
             auditTrail,
             templateHtml
         }
+    }
+
+    async updateDocumentStatus(documentId: string, organizationId: string, status: DocumentStatus, userId?: string) {
+        const document = await documentRepository.findByIdAndOrg(documentId, organizationId);
+        if (!document) throw ApiErrors.documentNotFound();
+
+        await documentRepository.updateById(documentId, { status });
+        await auditLogRepository.create({
+            organizationId: new mongoose.Types.ObjectId(organizationId),
+            actorId: new mongoose.Types.ObjectId(userId || document.uploadedById),
+            documentId: document._id as mongoose.Types.ObjectId,
+            action: status === DocumentStatus.EXPORTED ? AuditAction.DOCUMENT_STATUS_CHANGED : AuditAction.DOCUMENT_REJECTED,
+            details: {
+                filename: document.originalFileName
+            }
+        });
+
+        return document.processingDetails.secureUrl;
+    }
+
+    async updateStatus(documentId: string, organizationId: string, status: DocumentStatus, userId?: string) {
+        return this.updateDocumentStatus(documentId, organizationId, status, userId);
     }
 
     async deleteDocument(documentId: string, organizationId: string, userId: string) {

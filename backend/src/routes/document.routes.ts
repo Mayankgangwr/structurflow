@@ -12,10 +12,16 @@ documentRoutes.use(requireAuth);
 documentRoutes.post('/', uploadMiddleware.array('files', 10), documentController.upload);
 documentRoutes.post('/process', documentController.process);
 
+documentRoutes.get('/transform-preview/:id', documentController.transformedDocumentPreview);
+documentRoutes.put('/export/:id', documentController.updateStatus);
+
 documentRoutes.get('/summary/:projectId', documentController.summary);
 documentRoutes.get('/detail/:id', documentController.getOne);
 documentRoutes.get('/:projectId', documentController.list);
+
+documentRoutes.put('/verify/:id', documentController.verifyDocument);
 documentRoutes.delete('/:id', documentController.delete);
+
 
 
 export default documentRoutes;

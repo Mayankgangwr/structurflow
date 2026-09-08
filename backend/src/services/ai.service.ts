@@ -1,115 +1,139 @@
 import { gemini } from "@/config/gemini";
 import { ITemplateField, ITemplateSchema } from "@/models/template.model";
+import { ExtractedPdfElements } from "@/utils/extractPdfElements";
 import { logger } from "@/utils/logger";
 
 // ─────────────────────────────────────────────────────────
-// The system prompt that turns raw HTML into a template
+// The system prompt that turns  extracted text elements into a template
 // ─────────────────────────────────────────────────────────
 
 const TEMPLATE_PROCESSING_PROMPT = `
 You are an expert document template analyzer for a system called StructurFlow.
 
-Your job is to take HTML that was generated from a PDF document (such as an Offer Letter, Invoice, NDA, Appointment Letter, etc.) and do TWO things:
+Your job is to analyze extracted text elements from a PDF document (such as an Offer Letter, Invoice, NDA, Employment Agreement, Receipt, etc.) and perform TWO tasks:
+1. Identify all dynamic variable fields (converting actual sample values into Handlebars {{placeholders}} if they aren't already).
+2. Generate a structured template schema defining every dynamic field.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TASK 1: Create Template HTML
+INPUT FORMAT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Analyze the HTML content and identify ALL dynamic/variable values — these are values that would change from document to document. Replace each dynamic value with a Handlebars-style placeholder: {{field_name}}
+You will receive a JSON array of extracted PDF text items. Each item has:
+- id: A unique numeric identifier for the text element
+- text: The text string extracted from that exact position
+- page: The page number (1-indexed)
+- isBold: Whether the font is bold (optional)
 
-WHAT IS DYNAMIC (replace these):
-- Person names (candidate name, manager name, signatory name)
-- Dates (offer date, joining date, contract date)
-- Addresses (street, city, state, postal code)
-- Financial values (salary, allowances, bonuses, totals, amounts)
-- Reference numbers (offer letter number, candidate ID, invoice number)
-- Job/role information (job title, department, designation, reporting manager)
-- Company-specific variable data (work location, branch, etc.)
-- Contact details (email, phone number)
-- Any percentage values that are specific to a deal/person (tax rate, variable pay %)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TASK 1: Detect Dynamic Fields vs Static Content
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-WHAT IS STATIC (DO NOT replace these):
-- Section headings ("1. Position Details", "2. Compensation", "Terms and Conditions")
-- Labels and field names ("Position:", "Department:", "Base Salary:")
-- Legal boilerplate text and standard clauses
-- Company name (unless it appears as a variable in a multi-company system)
-- Table headers ("Component", "Annual Amount", "Monthly Amount")
-- Standard phrases ("Dear", "We are pleased to offer", "Subject:", "To,")
-- Signature labels ("Authorized Signatory", "Employee Signature")
-- Any instructional/formatting text
+Analyze the text items in context to distinguish between dynamic values and static template boilerplate.
+
+WHAT IS DYNAMIC (Must be represented as {{field_name}}):
+- Names (Candidate name, employee name, client name, manager name, signatory name)
+- Dates (Offer date, joining date, issue date, due date, contract start/end date)
+- Addresses & Locations (Street address, city, state, postal code, work location)
+- Financial & Monetary values (Base salary, allowances, bonuses, hourly rates, total compensation, taxes, invoice totals)
+- Reference / ID Numbers (Offer letter number, candidate ID, invoice number, employee ID, PAN, SSN)
+- Roles & Departments (Job title, department name, designation, reporting manager)
+- Contact Info (Email addresses, phone numbers)
+- Percentage & Rate values (Variable pay %, commission %, discount rate)
+
+WHAT IS STATIC (Keep exactly as-is; DO NOT replace):
+- Section headings ("1. Position Details", "2. Compensation", "Terms and Conditions", "Acceptance")
+- Labels and keys ("Position:", "Department:", "Base Salary:", "Offer Letter No.", "Date:")
+- Standard legal boilerplate and clauses ("Your employment will be subject to...", "Please sign and return...")
+- Static company names & brand logos
+- Table column headers ("Component", "Annual Amount", "Item", "Quantity", "Price")
+- Salutations & prefixes ("Dear", "Subject:", "To,", "For STRUCTUREFLOW", "Accepted by Candidate")
+- Signature line prompts ("Authorized Signatory", "Date:")
 
 CRITICAL RULES:
-1. DO NOT modify any HTML tags, attributes, CSS styles, classes, or structure.
-2. ONLY replace the text content inside elements — never touch the markup itself.
-3. If you see existing {{placeholder}} syntax already in the HTML, KEEP them as-is.
-4. Use snake_case for all field names (e.g., candidate_name, base_salary_annual).
-5. If the same conceptual value appears multiple times in the document (e.g., the candidate name appears in the greeting AND in the signature block), use the SAME placeholder name in both places.
-6. For tabular financial data, create separate fields for each row (base_salary_annual, allowances_annual, variable_pay_annual, total_compensation_annual).
-7. Preserve ALL whitespace, line breaks, and formatting exactly as they appear.
+1. If an item ALREADY contains Handlebars syntax like {{candidate_name}}, PRESERVE the exact placeholder name.
+2. If an item contains real sample data (e.g., "Rahul Sharma", "SF-2026-9041", "INR 22,00,000"), replace ONLY the variable part with a snake_case placeholder (e.g., "{{candidate_name}}", "{{offer_letter_number}}", "{{base_salary_annual}}").
+3. If an item is a sentence containing both static and dynamic parts (e.g., "Dear Rahul,"), replace only the name: "Dear {{candidate_first_name}},".
+4. If the same entity appears multiple times across the document (e.g., candidate name in address, salutation, and acceptance block), reuse the EXACT SAME placeholder name.
+5. All field names MUST be snake_case (e.g. joining_date, total_compensation_annual).
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TASK 2: Generate Template Schema
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-For every unique {{placeholder}} you created in the HTML, generate a field definition with:
+For every unique dynamic field identified, define an entry in the "fields" array with:
 
-- fieldName: The exact placeholder name (must match what's in the HTML)
-- label: A clean, human-readable label (e.g., "Candidate Name", "Base Salary (Annual)")
-- type: One of: "string", "number", "date", "currency", "boolean"
-- required: true if the field is essential for the document to make sense
-- placeholder: The {{field_name}} syntax (e.g., "{{candidate_name}}")
-- originalValue: The actual value that was in the original HTML before you replaced it (e.g., "Rahul Sharma", "₹18,00,000"). If the original already had a placeholder like {{candidate_name}}, set this to an empty string "".
-- description: A short description of what this field represents
+- fieldName: The exact snake_case placeholder name without braces (e.g., "candidate_name", "joining_date")
+- label: Clean, professional human-readable label (e.g., "Candidate Name", "Joining Date", "Base Salary (Annual)")
+- type: Exactly one of: "string" | "number" | "date" | "currency" | "boolean"
+- required: Boolean. True if the document cannot function without this field (e.g., candidate name, salary), false for optional fields.
+- placeholder: The full Handlebars token (e.g., "{{candidate_name}}")
+- originalValue: The sample value found in the original document (e.g., "Rahul Sharma", "15 September 2026", "INR 22,00,000"). If the template already had {{placeholder}} syntax, set to "".
+- description: A brief, clear explanation of what this field represents.
 
-TYPE CLASSIFICATION RULES:
-- "string" → names, addresses, titles, reference numbers, general text
-- "number" → quantities, counts, percentages
-- "date" → any date value (joining date, offer date, contract start date)
-- "currency" → any monetary value (salary, allowances, bonuses, amounts with ₹, $, etc.)
-- "boolean" → yes/no or true/false fields (rare in documents)
+TYPE CLASSIFICATION:
+- "string"   → Names, addresses, job titles, IDs, reference numbers, emails, phone numbers
+- "number"   → Quantities, counts, percentage rates (e.g., 15)
+- "date"     → Any date (e.g., "03 September 2026", "2026-09-15")
+- "currency" → Monetary values (e.g., "INR 22,00,000", "$120,000", "₹4,50,000")
+- "boolean"  → Yes/No toggles or conditional clauses
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 OUTPUT FORMAT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-You MUST return the output in exactly TWO sections, separated by the delimiter "---END_SCHEMA---".
+You MUST return a single, valid JSON object with NO markdown code fences and NO surrounding text:
 
-SECTION 1: The JSON Schema
-Return a VALID JSON object representing the schema. Do NOT wrap the HTML inside this JSON.
 {
-  "version": 1,
-  "fields": [
+  "schema": {
+    "version": 1,
+    "fields": [
+      {
+        "fieldName": "candidate_name",
+        "label": "Candidate Name",
+        "type": "string",
+        "required": true,
+        "placeholder": "{{candidate_name}}",
+        "originalValue": "Rahul Sharma",
+        "description": "Full legal name of the candidate"
+      },
+      {
+        "fieldName": "base_salary_annual",
+        "label": "Base Salary (Annual)",
+        "type": "currency",
+        "required": true,
+        "placeholder": "{{base_salary_annual}}",
+        "originalValue": "INR 22,00,000",
+        "description": "Annual base salary before deductions"
+      }
+    ]
+  },
+  "replacements": [
     {
-      "fieldName": "candidate_name",
-      "label": "Candidate Name",
-      "type": "string",
-      "required": true,
-      "placeholder": "{{candidate_name}}",
-      "originalValue": "Rahul Sharma",
-      "description": "Full name of the candidate"
+      "id": 12,
+      "originalText": "Rahul Sharma",
+      "templateText": "{{candidate_name}}"
+    },
+    {
+      "id": 18,
+      "originalText": "Dear Rahul,",
+      "templateText": "Dear {{candidate_first_name}},"
     }
   ]
 }
 
----END_SCHEMA---
-
-SECTION 2: The Modified HTML
-Return the complete modified HTML string with all {{placeholders}} injected.
-<html xmlns=...
-...
-</html>
-
-IMPORTANT:
-- Return exactly two sections separated by "---END_SCHEMA---".
-- Do not wrap the JSON or HTML in markdown code blocks if possible.
-- Every {{placeholder}} in the HTML must have a corresponding entry in the schema fields array.
-- Every entry in the schema fields array must have a corresponding {{placeholder}} in the HTML.
+Note:
+- "replacements" only needs to contain elements where actual sample data was replaced by a {{placeholder}}.
+- If the element was already a {{placeholder}}, you do not need to list it in "replacements", but you MUST still define it in "schema.fields".
 `;
-
 
 export interface IAITemplateResult {
     templateHtml: string;
     schema: ITemplateSchema;
+}
+
+export interface IAIExtractedElementsResult {
+    schema: ITemplateSchema;
+    extractedElements: ExtractedPdfElements;
 }
 
 class AIService {
@@ -264,6 +288,51 @@ class AIService {
             logger.error("AI Service: Template processing failed", error);
             throw new Error(`AI template processing failed: ${error.message}`);
         }
+    }
+
+    async processExtractedElements(extractedElements: ExtractedPdfElements): Promise<IAIExtractedElementsResult> {
+        // 1. Prepare lightweight text representation (only id, text, page, isBold)
+        const textItems = extractedElements.texts.map((el, index) => ({
+            id: index,
+            text: el.text,
+            page: el.page,
+            isBold: el.isBold,
+        }));
+
+        // 2. Call Gemini
+        const response = await gemini.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: [
+                {
+                    role: "user",
+                    parts: [
+                        {
+                            text: `${TEMPLATE_PROCESSING_PROMPT}\n\nHere are the extracted PDF text elements:\n\n${JSON.stringify(textItems, null, 2)}`
+                        }
+                    ]
+                }
+            ],
+            config: {
+                temperature: 0.1,
+                responseMimeType: "application/json",
+            }
+        });
+
+        const resultJson = JSON.parse(response.text?.trim() || "{}");
+        const schema: ITemplateSchema = resultJson.schema;
+        const replacements: Array<{ id: number; templateText: string }> = resultJson.replacements || [];
+
+        // 3. Apply any replacements back to extractedElements in-place
+        for (const rep of replacements) {
+            if (extractedElements.texts[rep.id]) {
+                extractedElements.texts[rep.id].text = rep.templateText;
+            }
+        }
+
+        return {
+            schema,
+            extractedElements,
+        };
     }
 }
 

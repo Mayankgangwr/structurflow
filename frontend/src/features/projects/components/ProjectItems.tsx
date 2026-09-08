@@ -10,6 +10,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { Project, useDeleteProjectMutation } from "../projectApi";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 export interface IProjectItems {
     projects: Project[];
@@ -61,13 +62,13 @@ const ProjectItems: React.FC<IProjectItems> = ({ projects }) => {
             id: "project",
             header: "Project",
             cell: (project: Project) => (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 cursor-pointer hover:bg-surface-container-low p-1" onClick={() => router.push(`/project/${project.id}`)}>
                     <div
                         className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
                         <Folder className="w-4 h-4" />
                     </div>
                     <div className="max-w-60">
-                        <p className="font-semibold text-[12px] text-text-primary truncate">{project.name}
+                        <p className="font-semibold text-[12px] text-text-primary truncate hover:underline hover:text-primary ">{project.name}
                             <span className="ms-1 text-secondary font-normal text-[13px]">({project.documents.toLocaleString()})</span>
                         </p>
                         <p className="text-secondary text-[12px] truncate">{project.description}</p>
@@ -128,58 +129,37 @@ const ProjectItems: React.FC<IProjectItems> = ({ projects }) => {
                 </span>
             ),
         },
-
         {
             id: "actions",
             header: "Actions",
             headerClassName: "text-right",
             className: "text-right",
             cell: (project) => (
-                <DropdownMenu>
-                    <DropdownMenuTrigger
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-1.5 text-secondary transition-colors hover:text-text-primary hover:bg-surface-container-low rounded-md sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 outline-none"
-                    >
-                        <MoreVertical className="w-5 h-5" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40 font-body-sm text-body-sm bg-surface border-border-subtle z-50">
-                        <DropdownMenuItem
-                            className="cursor-pointer hover:bg-surface-container-low text-text-primary"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(`/project/${project.id}`);
-                            }}
-                        >
-                            <Eye className="mr-2 h-4 w-4" />
-                            <span>View</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            className="cursor-pointer hover:bg-surface-container-low text-text-primary"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleEdit(project)
-                            }}
-                        >
-                            <Edit2 className="mr-2 h-4 w-4" />
-                            <span>Edit</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            className="cursor-pointer text-error hover:bg-error/10 hover:text-error focus:bg-error/10 focus:text-error"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenDeleteDialog(project.id);
-                            }}
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            <span>Delete</span>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex items-center justify-end gap-2 px">
+                    <Button
+                        variant="outline"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenDeleteDialog(project.id);
+                        }}
+                        className="text-error hover:text-error  transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
+                        size={"icon-sm"}>
+                        <Trash2 className="h-5 w-5 text-error/70 hover:text-error" />
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(project)
+                        }}
+                        className="text-primary/70 hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
+                        size={"icon-sm"}>
+                        <Edit2 className="h-5 w-5" />
+                    </Button>
+                </div >
             ),
         },
     ];
-
-
 
     return (
         <>

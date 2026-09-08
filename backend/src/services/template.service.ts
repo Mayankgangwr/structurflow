@@ -65,47 +65,252 @@ class TemplateService {
 
 
         // 2. Actual Data JSON
-        const actualData = {
-            offer_letter_number: "SF-2026-9041",
-            offer_date: "03 September 2026",
-            candidate_id: "SF-EMP-1082",
-            joining_date: "15 September 2026",
-            candidate_name: "Rahul Sharma",
-            candidate_first_name: "Rahul",
-            candidate_address: "Flat 402, Green Glen Layout",
-            candidate_city: "Bengaluru",
-            candidate_state: "Karnataka",
-            candidate_postal_code: "560103",
-            job_title: "Senior Full Stack Engineer",
-            department_name: "Core Platform Engineering",
-            reporting_manager: "Priya Patel",
-            employment_type: "Permanent Full-Time",
-            work_location: "Bengaluru (Hybrid)",
-            base_salary_annual: "INR 22,00,000",
-            allowances_annual: "INR 4,00,000",
-            variable_pay_annual: "INR 2,50,000",
-            total_compensation_annual: "INR 28,50,000",
-            authorized_signatory_name: "Aman Gupta",
-            authorized_signatory_title: "Director of People Operations",
-            acceptance_date: "05 September 2026",
-            company_address: "Embassy TechVillage, Outer Ring Road, Bengaluru",
-            company_email: "people@structureflow.ai",
-            company_phone: "+91 80 4123 4567"
-        };
+        // const actualData = [
+        //     {
+        //         fieldName: 'offer_letter_number',
+        //         label: 'Offer Letter Number',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{offer_letter_number}}',
+        //         originalValue: 'SF-HR-2026-0847',
+        //         description: 'Unique identifier for the offer letter'
+        //     },
+        //     {
+        //         fieldName: 'offer_date',
+        //         label: 'Offer Date',
+        //         type: 'date',
+        //         required: true,
+        //         placeholder: '{{offer_date}}',
+        //         originalValue: '31 August 2026',
+        //         description: 'Date the offer letter was issued'
+        //     },
+        //     {
+        //         fieldName: 'candidate_id',
+        //         label: 'Candidate ID',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{candidate_id}}',
+        //         originalValue: null,
+        //         description: 'Unique identifier for the candidate'
+        //     },
+        //     {
+        //         fieldName: 'joining_date',
+        //         label: 'Joining Date',
+        //         type: 'date',
+        //         required: true,
+        //         placeholder: '{{joining_date}}',
+        //         originalValue: '15 September 2026',
+        //         description: 'Date the candidate is expected to join'
+        //     },
+        //     {
+        //         fieldName: 'candidate_name',
+        //         label: 'Candidate Name',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{candidate_name}}',
+        //         originalValue: 'Rahul Sharma',
+        //         description: 'Full legal name of the candidate'
+        //     },
+        //     {
+        //         fieldName: 'candidate_address',
+        //         label: 'Candidate Address',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{candidate_address}}',
+        //         originalValue: '42 Green Park Avenue',
+        //         description: 'Street address of the candidate'
+        //     },
+        //     {
+        //         fieldName: 'candidate_city',
+        //         label: 'Candidate City',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{candidate_city}}',
+        //         originalValue: 'Noida',
+        //         description: 'City of the candidate\'s address'
+        //     },
+        //     {
+        //         fieldName: 'candidate_state',
+        //         label: 'Candidate State',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{candidate_state}}',
+        //         originalValue: 'Uttar Pradesh',
+        //         description: 'State of the candidate\'s address'
+        //     },
+        //     {
+        //         fieldName: 'candidate_postal_code',
+        //         label: 'Candidate Postal Code',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{candidate_postal_code}}',
+        //         originalValue: '201301',
+        //         description: 'Postal code of the candidate\'s address'
+        //     },
+        //     {
+        //         fieldName: 'candidate_first_name',
+        //         label: 'Candidate First Name',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{candidate_first_name}}',
+        //         originalValue: 'Rahul',
+        //         description: 'First name of the candidate, used in salutation'
+        //     },
+        //     {
+        //         fieldName: 'job_title',
+        //         label: 'Job Title',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{job_title}}',
+        //         originalValue: 'Senior Software Engineer',
+        //         description: 'Official job title for the position offered'
+        //     },
+        //     {
+        //         fieldName: 'department_name',
+        //         label: 'Department Name',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{department_name}}',
+        //         originalValue: 'Engineering',
+        //         description: 'Department the candidate will be working in'
+        //     },
+        //     {
+        //         fieldName: 'employment_type',
+        //         label: 'Employment Type',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{employment_type}}',
+        //         originalValue: 'Full-time',
+        //         description: 'Type of employment (e.g., Full-time, Part-time, Contract)'
+        //     },
+        //     {
+        //         fieldName: 'work_location',
+        //         label: 'Work Location',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{work_location}}',
+        //         originalValue: 'Noida, Uttar Pradesh',
+        //         description: 'Primary physical or remote work location'
+        //     },
+        //     {
+        //         fieldName: 'reporting_manager',
+        //         label: 'Reporting Manager',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{reporting_manager}}',
+        //         originalValue: 'Ananya Mehta',
+        //         description: 'Name of the candidate\'s direct reporting manager'
+        //     },
+        //     {
+        //         fieldName: 'base_salary_annual',
+        //         label: 'Base Salary (Annual)',
+        //         type: 'currency',
+        //         required: true,
+        //         placeholder: '{{base_salary_annual}}',
+        //         originalValue: '15,60,000',
+        //         description: 'Annual base salary before deductions'
+        //     },
+        //     {
+        //         fieldName: 'allowances_annual',
+        //         label: 'Allowances (Annual)',
+        //         type: 'currency',
+        //         required: false,
+        //         placeholder: '{{allowances_annual}}',
+        //         originalValue: null,
+        //         description: 'Total annual allowances'
+        //     },
+        //     {
+        //         fieldName: 'variable_pay_annual',
+        //         label: 'Variable / Performance Pay (Annual)',
+        //         type: 'currency',
+        //         required: false,
+        //         placeholder: '{{variable_pay_annual}}',
+        //         originalValue: '2,40,000',
+        //         description: 'Annual variable or performance-based pay'
+        //     },
+        //     {
+        //         fieldName: 'total_compensation_annual',
+        //         label: 'Total Compensation (Annual)',
+        //         type: 'currency',
+        //         required: true,
+        //         placeholder: '{{total_compensation_annual}}',
+        //         originalValue: '18,00,000',
+        //         description: 'Total annual compensation including base, allowances, and variable pay'
+        //     },
+        //     {
+        //         fieldName: 'company_address',
+        //         label: 'Company Address',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{company_address}}',
+        //         originalValue: '5th Floor, Tower B, Sector 62, Noida, Uttar Pradesh 201309',
+        //         description: 'Full address of the company'
+        //     },
+        //     {
+        //         fieldName: 'company_email',
+        //         label: 'Company Email',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{company_email}}',
+        //         originalValue: 'people@structurflow.example',
+        //         description: 'Official email address of the company'
+        //     },
+        //     {
+        //         fieldName: 'company_phone',
+        //         label: 'Company Phone',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{company_phone}}',
+        //         originalValue: '+91 120 456 7800',
+        //         description: 'Official phone number of the company'
+        //     },
+        //     {
+        //         fieldName: 'authorized_signatory_name',
+        //         label: 'Authorized Signatory Name',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{authorized_signatory_name}}',
+        //         originalValue: 'Ananya Mehta',
+        //         description: 'Name of the authorized person signing the offer letter'
+        //     },
+        //     {
+        //         fieldName: 'authorized_signatory_title',
+        //         label: 'Authorized Signatory Title',
+        //         type: 'string',
+        //         required: true,
+        //         placeholder: '{{authorized_signatory_title}}',
+        //         originalValue: 'Head of People Operations',
+        //         description: 'Job title of the authorized person signing the offer letter'
+        //     },
+        //     {
+        //         fieldName: 'acceptance_date',
+        //         label: 'Acceptance Date',
+        //         type: 'date',
+        //         required: true,
+        //         placeholder: '{{acceptance_date}}',
+        //         originalValue: null,
+        //         description: 'Date the candidate accepts the offer'
+        //     }
+        // ];
 
-        const templateElements = await extractPdfElements({ fileBuffer: file.buffer });
+        // Extract the pdf layout
+        const rawExtractedElements = await extractPdfElements({ fileBuffer: file.buffer });
 
-        if (templateElements !== null) {
-            // 3. Generate PDF
-            const pdfBuffer = await generatePdfFromTemplate(templateElements, actualData, {
-                templatePdfBuffer: file.buffer
-            });
-            // A) Save to disk:
-            fs.writeFileSync("Generated_Offer_Letter.pdf", pdfBuffer);
-            console.log("Extract Pdf Elements: ", templateElements);
-            // 1. Calculate SHA-256 hash of the file buffer
-        }
+        if (rawExtractedElements === null) throw ApiErrors.faildToDocumentExtraction();
 
+        // AI processes the extracted PDF AST directly:
+        const { schema, extractedElements } = await aiService.processExtractedElements(rawExtractedElements);
+
+        // // 3. Generate PDF
+        // const pdfBuffer = await generatePdfFromTemplate(extractedElements, actualData, {
+        //     templatePdfBuffer: file.buffer
+        // });
+
+        // // A) Save to disk:
+        // fs.writeFileSync("Generated_Offer_Letter.pdf", pdfBuffer);
+        // console.log("Extract Pdf Elements: ", extractedElements);
+
+        // 1. Calculate SHA-256 hash of the file buffer
         const fileHash = crypto.createHash('sha256').update(file.buffer).digest('hex');
 
         // 2. Check for exact duplicates in the same organization
@@ -135,7 +340,11 @@ class TemplateService {
                 fileHash,
                 publicId: uploadResult.public_id,
                 secureUrl: uploadResult.secure_url,
-                status: TemplateStatus.UPLOADED,
+                status: TemplateStatus.READY,
+                pageCount: extractedElements.pageCount,
+                extractedElements: extractedElements,
+                templateSchema: schema,
+                isActive: true,
             });
 
             await projectRepository.updateTemplate(projectId, document._id as mongoose.Types.ObjectId);

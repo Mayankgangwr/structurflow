@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { cn } from "@/lib/utils";
 
 interface DialogProps {
   open: boolean;
@@ -8,7 +9,9 @@ interface DialogProps {
   description?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "pdf";
+  className?: string;
+  contentClassName?: string;
   showCloseButton?: boolean;
 }
 
@@ -17,6 +20,7 @@ const sizeClasses = {
   md: "w-[90vw] max-w-[680px]",
   lg: "w-[90vw] max-w-[720px]",
   xl: "w-[90vw] max-w-[1024px]",
+  pdf: "w-[94vw] max-w-[720px]",
 };
 
 export function Dialog({
@@ -27,6 +31,8 @@ export function Dialog({
   children,
   footer,
   size = "md",
+  className,
+  contentClassName,
   showCloseButton = true,
 }: DialogProps) {
   const [mounted, setMounted] = useState(false);
@@ -47,7 +53,7 @@ export function Dialog({
 
       {/* Dialog */}
       <div
-        className={`relative ${sizeClasses[size]} rounded-t-[1.5rem] sm:rounded-xl bg-surface shadow-xl max-h-[95vh] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200`}
+        className={`relative ${sizeClasses[size]} ${className || ''} rounded-t-[1.5rem] sm:rounded-xl bg-surface shadow-xl max-h-[95vh] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200`}
         style={{ minWidth: 'min(100vw, 448px)' }}
       >
         {/* Mobile Drag Handle */}
@@ -85,7 +91,7 @@ export function Dialog({
         )}
 
         {/* Content */}
-        <div className="p-4 overflow-y-auto">
+        <div className={cn("p-4 overflow-y-auto flex-1 min-h-0", contentClassName)}>
           {children}
         </div>
 

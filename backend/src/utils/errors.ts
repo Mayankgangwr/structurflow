@@ -70,6 +70,8 @@ export const ApiErrors = {
     invalidDocumentType: () => new ValidationError('Invalid document type', [{ code: 'INVALID_DOCUMENT_TYPE', message: 'Invalid or missing documentType. Must be TEMPLATE or RAW.' }]),
     fileTooLarge: (maxSizeMB: number) => new ValidationError('File too large', [{ code: 'FILE_TOO_LARGE', message: `The uploaded file exceeds the maximum allowed size of ${maxSizeMB}MB.` }]),
     uploadFailed: () => new InternalError('File upload failed', [{ code: 'UPLOAD_FAILED', message: 'An error occurred while uploading the file to storage.' }]),
+    faildToDocumentExtraction: (message = 'Failed to extract document elements') => new InternalError(message, [{ code: 'DOCUMENT_EXTRACTION_FAILED', message }]),
+    failedDocumentExtraction: (message = 'Failed to extract document elements') => new InternalError(message, [{ code: 'DOCUMENT_EXTRACTION_FAILED', message }]),
 
     // --- Projects ---
     //  prjectIdRequired: () => new ValidationError(),
@@ -81,6 +83,7 @@ export const ApiErrors = {
     duplicateTemplate: () => new ConflictError('Template already exists', [{ code: 'DUPLICATE_TEMPLATE', message: 'A template with this exact file already exists in the organization.' }]),
 
     // --- Generic ---
+    badRequest: (message: string, code = 'BAD_REQUEST') => new BadRequestError(message, [{ code, message }]),
     missingRequiredField: (field: string) => new ValidationError(`${field} is required`, [{ field, code: 'REQUIRED_FIELD', message: `${field} is required.` }]),
     orgIdRequired: () => new ValidationError('Organization ID is required', [{ code: 'ORG_ID_REQUIRED', message: 'The X-Organization-Id header or orgId parameter is required.' }]),
 }

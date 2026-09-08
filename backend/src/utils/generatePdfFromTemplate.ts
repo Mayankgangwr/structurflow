@@ -4,7 +4,9 @@ import {
     TextElement,
     LineElement,
     RectangleElement,
-    ImageElement
+    ImageElement,
+    TextAlignment,
+    detectElementAlignment
 } from "./extractPdfElements";
 
 export interface PdfTextElement {
@@ -17,6 +19,8 @@ export interface PdfTextElement {
     fontSize: number;
     isBold?: boolean;
     color?: string | { r: number; g: number; b: number };
+    bgColor?: string;
+    align?: TextAlignment;
 }
 
 export interface GeneratePdfOptions {
@@ -51,58 +55,96 @@ function parseHexColor(hex?: string): RGB | undefined {
     return undefined;
 }
 
+function hexLuminance(hex?: string): number {
+    if (!hex || typeof hex !== "string") return 1;
+    const clean = hex.replace("#", "");
+    let r = 255, g = 255, b = 255;
+    if (clean.length === 6) {
+        r = parseInt(clean.substring(0, 2), 16);
+        g = parseInt(clean.substring(2, 4), 16);
+        b = parseInt(clean.substring(4, 6), 16);
+    } else if (clean.length === 3) {
+        r = parseInt(clean[0] + clean[0], 16);
+        g = parseInt(clean[1] + clean[1], 16);
+        b = parseInt(clean[2] + clean[2], 16);
+    }
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
+
+export interface TemplateFieldInput {
+    fieldName: string;
+    label?: string;
+    type?: string;
+    required?: boolean;
+    placeholder?: string;
+    originalValue?: any;
+    value?: any;
+    description?: string;
+}
+
+export type TemplateDataInput =
+    | Record<string, any>
+    | TemplateFieldInput[]
+    | { data?: TemplateFieldInput[] | Record<string, any> }
+    | { fields?: TemplateFieldInput[] | Record<string, any> };
+
 /**
- * Accurately determines the background color behind an element.
- * 1. Checks for specific containing row/cell rectangles (sorted by area ascending to pick the most specific local box).
- * 2. If no valid light container rectangle is found, uses the page's detected canvas background color.
- * Never uses dark colors (e.g. navy #1a365d or slate #475569) as a redaction background.
+ * Normalizes any template data input format:
+ * - Array of field objects: [ { fieldName: 'candidate_name', originalValue: 'Rahul Sharma', value?: '...' } ]
+ * - Wrapped object: { data: [ ... ] } or { fields: [ ... ] }
+ * - Standard flat dictionary: { candidate_name: 'Rahul Sharma' }
+ * into a uniform Record<string, any> mapping.
  */
-function getSafeRedactionColor(
-    rectangles: RectangleElement[],
-    pageNum: number,
-    item: PdfTextElement,
-    originalWidth: number,
-    pageCanvasBg: string = "#faf8f5"
-): RGB {
-    // 1. Find all candidate filled rectangles containing this item
-    // Ignore small redaction artifacts from previous runs (height < 15 and width < 160)
-    const candidates = rectangles.filter((r) =>
-        r.page === pageNum &&
-        r.isFilled &&
-        r.fillColor &&
-        r.height >= 18 &&
-        r.x <= item.x + 6 &&
-        r.x + r.width >= item.x + originalWidth - 6 &&
-        r.y <= item.y + 10 &&
-        r.y + r.height >= item.y - 10
-    );
 
-    if (candidates.length > 0) {
-        // Sort by area ascending so we pick the MOST SPECIFIC (smallest) containing box (e.g. cell or row)
-        candidates.sort((a, b) => (a.width * a.height) - (b.width * b.height));
+export function normalizeTemplateData(input: TemplateDataInput): Record<string, any> {
+    if (!input) return {};
 
-        for (const cand of candidates) {
-            if (!cand.fillColor) continue;
-            const parsed = parseHexColor(cand.fillColor);
-            if (!parsed) continue;
-
-            // Check brightness so we never pick dark headers (e.g. navy #1a365d or slate #475569)
-            const brightness = 0.299 * parsed.red + 0.587 * parsed.green + 0.114 * parsed.blue;
-            if (brightness > 0.80) {
-                return parsed;
-            }
+    // 1. Wrapped object: { data: [...] } or { fields: [...] }
+    if (typeof input === "object" && !Array.isArray(input)) {
+        if ("data" in input && input.data) {
+            return normalizeTemplateData(input.data as any);
+        }
+        if ("fields" in input && input.fields) {
+            return normalizeTemplateData(input.fields as any);
         }
     }
 
-    // 2. Fall back to the detected page background color (e.g. #faf8f5 for warm ivory paper)
-    return parseHexColor(pageCanvasBg) || rgb(0.98, 0.973, 0.961);
+    // 2. Array of field definition objects: [ { fieldName, originalValue, value }, ... ]
+    if (Array.isArray(input)) {
+        const dict: Record<string, any> = {};
+        for (const item of input) {
+            if (!item || typeof item !== "object") continue;
+
+            const key =
+                (item as any).fieldName ||
+                ((item as any).placeholder ? (item as any).placeholder.replace(/^\{\{|\}\}$/g, "").trim() : "");
+
+            if (!key) continue;
+
+            // Prioritize user-provided 'value', fallback to 'originalValue', then empty string
+            const val =
+                (item as any).value !== undefined && (item as any).value !== null
+                    ? (item as any).value
+                    : (item as any).originalValue !== undefined && (item as any).originalValue !== null
+                    ? (item as any).originalValue
+                    : "";
+
+            dict[key] = val;
+        }
+        return dict;
+    }
+
+    // 3. Standard flat dictionary: { candidate_name: "Rahul Sharma", ... }
+    return input as Record<string, any>;
 }
 
 /**
- * Replaces {{placeholder}} tokens in text with matching values from the data dictionary.
+ * Replaces {{placeholder}} tokens in text with matching values from the data dictionary or field array.
  * Supports dot-notation (e.g. {{candidate.name}}) as well as standard keys (e.g. {{candidate_name}}).
  */
-export function interpolateText(text: string, data: Record<string, any>, fallback: string = ""): string {
+export function interpolateText(text: string, dataInput: TemplateDataInput, fallback: string = ""): string {
+    const data = normalizeTemplateData(dataInput);
     return text.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (match, key) => {
         // Direct key lookup
         if (data[key] !== undefined && data[key] !== null) {
@@ -165,7 +207,7 @@ function shouldRenderBold(
 
 /**
  * Generates an actual PDF Buffer by combining extracted template elements (text, lines, rectangles)
- * with real data.
+ * with real data (either a flat key-value dictionary or an array of field schema objects).
  * 
  * If options.templatePdfBuffer is provided, it operates in Template Overlay Mode:
  * Overlays populated values on the original PDF, ensuring 100% vector fidelity for all logos,
@@ -173,9 +215,10 @@ function shouldRenderBold(
  */
 export async function generatePdfFromTemplate(
     templateElements: Array<ExtractedElement | PdfTextElement>,
-    data: Record<string, any>,
+    dataInput: TemplateDataInput,
     options: GeneratePdfOptions = {}
 ): Promise<Buffer> {
+    const data = normalizeTemplateData(dataInput);
     const pageWidth = options.pageWidth ?? 595.28;
     const pageHeight = options.pageHeight ?? 841.89;
     const defaultColor = options.defaultTextColor ?? { r: 0.1, g: 0.1, b: 0.1 };
@@ -210,11 +253,27 @@ export async function generatePdfFromTemplate(
             if (pageIndex < 0 || pageIndex >= pdfDoc.getPageCount()) continue;
             const page = pdfDoc.getPage(pageIndex);
 
-            // Extract the detected page canvas background color (e.g. #faf8f5)
+            // Extract the detected page canvas background color from template elements
             const pageCanvasBg =
                 (templateElements as any)?.pages?.[pageIndex]?.backgroundColor ||
                 (templateElements as any)?.pageBackgroundColors?.[pageNum] ||
-                "#faf8f5";
+                "#ffffff";
+
+            // Check if this page uses an image-based background
+            // Extract vertical grid lines for cell boundary detection
+            const pageVerticalLines = templateElements
+                .filter(
+                    (el) =>
+                        "type" in el &&
+                        el.type === "line" &&
+                        el.page === pageNum &&
+                        (el as LineElement).orientation === "vertical"
+                )
+                .map((el) => ({
+                    x: (el as LineElement).x,
+                    y1: (el as LineElement).y1,
+                    y2: (el as LineElement).y2,
+                }));
 
             // Group into horizontal visual lines (|y1 - y2| <= 3)
             pageTexts.sort((a, b) => {
@@ -271,6 +330,7 @@ export async function generatePdfFromTemplate(
                         const firstPlaceholderIdx = cluster.findIndex((el) => /\{\{\s*[\w.-]+\s*\}\}/.test(el.text));
                         const firstEl = cluster[firstPlaceholderIdx];
                         const lastEl = cluster[cluster.length - 1];
+                        
 
                         const startX = firstEl.x - 2;
                         const endX = lastEl.x + (lastEl.width || 0) + 4;
@@ -280,13 +340,13 @@ export async function generatePdfFromTemplate(
                         const coverHeight = descenderMargin + ascenderMargin;
                         const coverY = Math.min(...cluster.map((el) => el.y)) - descenderMargin;
 
-                        const clusterBgColor = getSafeRedactionColor(
-                            rectangles,
-                            pageNum,
-                            firstEl,
-                            endX - startX,
-                            pageCanvasBg
-                        );
+                        // Use pre-computed bgColor from extraction
+                        let clusterBgColor = parseHexColor(firstEl.bgColor) || parseHexColor(pageCanvasBg) || rgb(1, 1, 1);
+                        // Contrast safeguard: if bgColor is dark but text is also dark, avoid drawing dark background
+                        const firstElColorHex = typeof firstEl.color === "string" ? firstEl.color : undefined;
+                        if (hexLuminance(firstEl.bgColor) < 0.3 && hexLuminance(firstElColorHex || "#2b2b2b") < 0.5) {
+                            clusterBgColor = parseHexColor(pageCanvasBg) || rgb(1, 1, 1);
+                        }
 
                         page.drawRectangle({
                             x: startX,
@@ -302,7 +362,17 @@ export async function generatePdfFromTemplate(
                             const populatedText = interpolateText(item.text, data, fallback);
                             const isBold = shouldRenderBold(item, populatedText, item.text);
                             const font = isBold ? boldFont : regularFont;
-                            const textColor = isBold ? rgb(0.06, 0.13, 0.24) : rgb(defaultColor.r, defaultColor.g, defaultColor.b);
+
+                            let textColor: RGB;
+                            if (item.color) {
+                                if (typeof item.color === "string") {
+                                    textColor = parseHexColor(item.color) || (isBold ? rgb(0.06, 0.13, 0.24) : rgb(defaultColor.r, defaultColor.g, defaultColor.b));
+                                } else {
+                                    textColor = rgb(item.color.r, item.color.g, item.color.b);
+                                }
+                            } else {
+                                textColor = isBold ? rgb(0.06, 0.13, 0.24) : rgb(defaultColor.r, defaultColor.g, defaultColor.b);
+                            }
 
                             if (i > firstPlaceholderIdx) {
                                 const prevItem = cluster[i - 1];
@@ -328,41 +398,59 @@ export async function generatePdfFromTemplate(
                         const populatedText = interpolateText(item.text, data, fallback);
                         const isBold = shouldRenderBold(item, populatedText, item.text);
                         const font = isBold ? boldFont : regularFont;
-                        const textColor = isBold ? rgb(0.06, 0.13, 0.24) : rgb(defaultColor.r, defaultColor.g, defaultColor.b);
+
+                        let textColor: RGB;
+                        if (item.color) {
+                            if (typeof item.color === "string") {
+                                textColor = parseHexColor(item.color) || (isBold ? rgb(0.06, 0.13, 0.24) : rgb(defaultColor.r, defaultColor.g, defaultColor.b));
+                            } else {
+                                textColor = rgb(item.color.r, item.color.g, item.color.b);
+                            }
+                        } else {
+                            textColor = isBold ? rgb(0.06, 0.13, 0.24) : rgb(defaultColor.r, defaultColor.g, defaultColor.b);
+                        }
 
                         const originalWidth = item.width || font.widthOfTextAtSize(item.text, item.fontSize);
                         const newWidth = font.widthOfTextAtSize(populatedText, item.fontSize);
-
-                        // Check alignment: Is the original text horizontally centered on the page?
                         const pageWidth = page.getWidth();
-                        const origCenter = item.x + (originalWidth / 2);
-                        const pageCenter = pageWidth / 2;
-                        const isPageCentered = Math.abs(origCenter - pageCenter) < 20;
+
+                        // Detect alignment (left, center, or right)
+                        const align =
+                            item.align ||
+                            detectElementAlignment(item, pageTexts, pageWidth, pageVerticalLines);
 
                         let drawX = item.x;
-                        let redactStartX = item.x - 2;
-                        let redactWidth = Math.max(originalWidth, newWidth) + 4;
-
-                        if (isPageCentered) {
-                            drawX = (pageWidth - newWidth) / 2;
-                            redactStartX = Math.min(item.x - 2, drawX - 2);
-                            const redactEndX = Math.max(item.x + originalWidth + 2, drawX + newWidth + 2);
-                            redactWidth = redactEndX - redactStartX;
+                        if (align === "right") {
+                            // Align to original text's right edge
+                            drawX = (item.x + originalWidth) - newWidth;
+                        } else if (align === "center") {
+                            // Center at page center if page-centered, otherwise at original text's center
+                            const origCenter = item.x + originalWidth / 2;
+                            const isPageCentered = Math.abs(origCenter - pageWidth / 2) < 20;
+                            const centerAnchor = isPageCentered ? pageWidth / 2 : origCenter;
+                            drawX = centerAnchor - (newWidth / 2);
+                        } else {
+                            // Left align: preserve original start x
+                            drawX = item.x;
                         }
+
+                        // Redaction box covers both the original placeholder and new text bounds
+                        const redactStartX = Math.min(item.x - 2, drawX - 2);
+                        const redactEndX = Math.max(item.x + originalWidth + 2, drawX + newWidth + 2);
+                        const redactWidth = redactEndX - redactStartX;
 
                         const descenderMargin = Math.max(item.fontSize * 0.38, 3.5);
                         const ascenderMargin = Math.max(item.fontSize * 0.95, 9.5);
                         const coverHeight = descenderMargin + ascenderMargin;
                         const coverY = item.y - descenderMargin;
 
-                        // Accurately determine the background color of this specific cell or page area
-                        const bgColor = getSafeRedactionColor(
-                            rectangles,
-                            pageNum,
-                            item,
-                            originalWidth,
-                            pageCanvasBg
-                        );
+                        // Use pre-computed bgColor from extraction
+                        let bgColor = parseHexColor(item.bgColor) || parseHexColor(pageCanvasBg) || rgb(1, 1, 1);
+                        // Contrast safeguard: if bgColor is dark but text is also dark, avoid drawing dark background
+                        const itemColorHex = typeof item.color === "string" ? item.color : undefined;
+                        if (hexLuminance(item.bgColor) < 0.3 && hexLuminance(itemColorHex || "#2b2b2b") < 0.5) {
+                            bgColor = parseHexColor(pageCanvasBg) || rgb(1, 1, 1);
+                        }
 
                         page.drawRectangle({
                             x: redactStartX,
@@ -418,10 +506,6 @@ export async function generatePdfFromTemplate(
             const fillColor = parseHexColor(rect.fillColor);
             const strokeColor = parseHexColor(rect.strokeColor);
 
-            // Skip drawing dark blue/black rectangles that overlap section headings
-            const isHeadingOverlay = rect.fillColor && rect.fillColor.toLowerCase().startsWith("#162") && rect.height < 40;
-            if (isHeadingOverlay) continue;
-
             if (rect.isFilled && fillColor) {
                 page.drawRectangle({
                     x: rect.x,
@@ -448,6 +532,9 @@ export async function generatePdfFromTemplate(
         const lines = elementsOnPage.filter(
             (el) => "type" in el && el.type === "line"
         ) as LineElement[];
+        const verticalLines = lines
+            .filter((l) => l.orientation === "vertical")
+            .map((l) => ({ x: l.x, y1: l.y1, y2: l.y2 }));
 
         for (const line of lines) {
             const strokeColor = parseHexColor(line.strokeColor) || rgb(0.6, 0.6, 0.6);
@@ -500,9 +587,16 @@ export async function generatePdfFromTemplate(
                 const font = isBold ? boldFont : regularFont;
 
                 const spaceWidth = font.widthOfTextAtSize(" ", item.fontSize);
-                let drawX = item.x;
+                const renderedWidth = font.widthOfTextAtSize(populatedText, item.fontSize);
+                const originalWidth = item.width || renderedWidth;
+                const align = item.align || detectElementAlignment(item, textElements, pageWidth, verticalLines);
 
-                if (i > 0) {
+                let drawX = item.x;
+                if (align === "right") {
+                    drawX = (item.x + originalWidth) - renderedWidth;
+                } else if (align === "center") {
+                    drawX = (item.x + originalWidth / 2) - (renderedWidth / 2);
+                } else if (i > 0) {
                     const originalGap = item.x - (prevOrigX + prevOrigWidth);
 
                     // Kerning check: if gap is negative or microscopic (< 1pt), do not add space (e.g. 'OFFER ' + 'LETTER')
@@ -540,7 +634,6 @@ export async function generatePdfFromTemplate(
                     color: textColor,
                 });
 
-                const renderedWidth = font.widthOfTextAtSize(populatedText, item.fontSize);
                 runningX = drawX + renderedWidth;
                 prevOrigX = item.x;
                 prevOrigWidth = item.width || renderedWidth;

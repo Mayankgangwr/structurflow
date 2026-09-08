@@ -2,6 +2,7 @@ import mongoose, {
     Schema,
     Document as MongooseDocument,
 } from "mongoose";
+import { ExtractedPdfElements, ExtractedElement } from "@/utils/extractPdfElements";
 
 export enum TemplateStatus {
     UPLOADED = "UPLOADED",
@@ -82,6 +83,7 @@ export interface ITemplate extends MongooseDocument {
     extractedData?: ITemplateExtractedData;
     htmlContent?: string;
     templateSchema?: ITemplateSchema;
+    extractedElements?: ExtractedPdfElements | ExtractedElement[];
 
     // Version
     version: number;
@@ -339,14 +341,15 @@ const templateSchema = new Schema<ITemplate>(
             default: undefined,
         },
 
-        // Generated HTML
-        htmlContent: {
-            type: String,
-        },
-
         // Generated Template Schema
         templateSchema: {
             type: templateGeneratedSchema,
+            default: undefined,
+        },
+
+        // Extracted PDF Elements AST
+        extractedElements: {
+            type: Schema.Types.Mixed,
             default: undefined,
         },
 

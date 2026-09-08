@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Document, useGetDocumentsQuery, useProcessDocumentMutation } from "@/features/documents/documentApi";
+import { Document, useGetDocumentsQuery, useProcessDocumentMutation, useDeleteDocumentMutation } from "@/features/documents/documentApi";
 import DataTable, { DataTableColumn } from "@/components/ui/data-table/DataTable";
 import { DataTablePagination } from "@/components/ui/data-table/DataTablePagination";
 import { cn, formatDate, formatSize, getFileType } from "@/lib/utils";
@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import UploadDocumentsForm from "@/features/documents/components/UploadDocumentsForm";
 import PdfPreviewDialog from "@/components/documents/PdfPreviewDialog";
 import TransformedDocumentPreviewDialog from "@/features/documents/components/TransformedDocumentPreviewDialog";
+import { Dialog } from "@/components/ui/dialog";
+import toast from "react-hot-toast";
 
 export interface IDocumentViewProps {
     projectId: string;
@@ -25,6 +27,7 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
 
     const [previewDocument, setPreviewDocument] = useState<IPreviewDocument>({ data: null, isOpen: false });
     const [previewTransformedDocument, setPreviewTransformedDocument] = useState<{ id: string | null, isOpen: boolean }>({ id: null, isOpen: false });
+    const [deletingDocument, setDeletingDocument] = useState<Document | null>(null);
 
     const { data: queryData, isLoading } = useGetDocumentsQuery({ projectId, page, limit: pageSize });
     const [
@@ -34,6 +37,7 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
             isError: isProcessingError,
             error: processingError
         }] = useProcessDocumentMutation();
+    const [deleteDocumentMutation, { isLoading: isDeleting }] = useDeleteDocumentMutation();
 
     const documents = queryData?.data?.documents || [];
     const totalDocuments = queryData?.data?.total || 0;
@@ -47,8 +51,26 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
     }
 
     const handleDelete = (id: string) => {
+        const doc = documents.find((d) => d._id === id);
+        if (doc) {
+            setDeletingDocument(doc);
+        }
+    };
 
-    }
+    const handleConfirmDelete = async () => {
+        if (!deletingDocument) return;
+        try {
+            await deleteDocumentMutation(deletingDocument._id).unwrap();
+            toast.success("Document deleted successfully");
+            if (documents.length === 1 && page > 1) {
+                setPage((prev) => prev - 1);
+            }
+            setDeletingDocument(null);
+        } catch (error: any) {
+            console.error("Error deleting document:", error);
+            toast.error(error?.data?.message || "Failed to delete document");
+        }
+    };
 
     const handleView = (id: string) => {
 
@@ -99,9 +121,12 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
             id: "status",
             header: "Status",
             cell: (document) => {
-                const statusConfig: any = {
+                const statusConfig: Record<string, string> = {
                     UPLOADED: "bg-primary/10 text-primary",
                     PROCESSING: "bg-warning-container text-warning",
+                    TRANSFORMED: "bg-primary/10 text-primary",
+                    VERIFIED: "bg-success-container text-success",
+                    EXPORTED: "bg-secondary-container text-secondary",
                     REVIEW_REQUIRED: "bg-error-container text-error",
                     TRUSTED: "bg-tertiary-container text-tertiary",
                     REJECTED: "bg-error-container text-error",
@@ -112,7 +137,7 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
                     <span
                         className={cn(
                             "px-2 py-1 rounded-full font-label-sm text-[12px] font-semibold tracking-wide border border-border-subtle",
-                            statusConfig[document.status]
+                            statusConfig[document.status] || "bg-secondary-container text-secondary"
                         )}
                     >
                         {document.status.replaceAll("_", " ")}
@@ -160,24 +185,20 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
                                 <Sparkles className="h-5 w-5 text-primary/70 hover:text-primary" />
                             )}
                         </Button>
-                    ) : document.status === 'REVIEW_REQUIRED' ? (
+                    ) : ["TRANSFORMED", "VERIFIED", "EXPORTED"].includes(document.status) ? (
                         <Button
                             variant="outline"
-                            title="Verify Document"
+                            title={document.status === "VERIFIED" ? "Export Document" : "Verify Document"}
                             className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
-                            size={"icon-sm"}>
-                            <FileCheck className="h-5 w-5 text-primary/70 hover:text-primary" />
+                            size={"icon-sm"}
+                            onClick={() => setPreviewTransformedDocument({ id: document._id, isOpen: true })}>
+                            {document.status === "VERIFIED" || document.status === "EXPORTED" ? (
+                                <FileDown className="h-5 w-5 text-primary/70 hover:text-primary" />
+                            ) : (
+                                <FileCheck className="h-5 w-5 text-primary/70 hover:text-primary" />
+                            )}
                         </Button>
-                    ) : (document.status === "TRUSTED" || document.status === "TRANSFORMED") && (
-                        <Button
-                            variant="outline"
-                            title="Export Document"
-                            onClick={() => setPreviewTransformedDocument({ id: document._id, isOpen: true })}
-                            className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
-                            size={"icon-sm"}>
-                            <FileDown className="h-5 w-5 text-primary/70 hover:text-primary" />
-                        </Button>
-                    )}
+                    ) : null}
 
                     <Button
                         variant="outline"
@@ -248,6 +269,64 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
                     isOpen={previewTransformedDocument.isOpen}
                     onClose={() => setPreviewTransformedDocument({ id: null, isOpen: false })}
                 />
+            )}
+
+            {/* Delete Confirmation Dialog */}
+            {deletingDocument && (
+                <Dialog
+                    className="max-w-75"
+                    open={!!deletingDocument}
+                    onClose={() => !isDeleting && setDeletingDocument(null)}
+                    title="Delete Document"
+                    footer={
+                        <div className="flex justify-end gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setDeletingDocument(null)}
+                                disabled={isDeleting}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleConfirmDelete}
+                                disabled={isDeleting}
+                                className="bg-error text-white hover:bg-error/90 flex items-center gap-1.5"
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Deleting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 className="w-4 h-4" />
+                                        Delete
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    }
+                >
+                    <div className="p-4">
+                        <div className="flex items-start gap-3">
+                            <div className="p-2.5 bg-error-container text-error rounded-lg shrink-0">
+                                <Trash2 className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <p className="font-semibold text-text-primary text-sm">
+                                    Are you sure you want to delete this document?
+                                </p>
+                                <p className="text-secondary text-xs mt-1">
+                                    <span className="font-medium text-text-primary">
+                                        {deletingDocument.originalFileName || deletingDocument.originalFilename}
+                                    </span>{" "}
+                                    will be permanently deleted. This action cannot be undone.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </Dialog>
             )}
         </div>
     )

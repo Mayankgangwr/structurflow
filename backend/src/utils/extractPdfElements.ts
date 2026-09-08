@@ -13,6 +13,8 @@ export interface BaseElement {
     height: number;
 }
 
+export type TextAlignment = "left" | "center" | "right";
+
 export interface TextElement extends BaseElement {
     type: "text";
     text: string;
@@ -20,6 +22,8 @@ export interface TextElement extends BaseElement {
     fontName?: string;
     isBold?: boolean;
     color?: string;
+    bgColor?: string;
+    align?: TextAlignment;
 }
 
 export interface LineElement extends BaseElement {
@@ -72,6 +76,7 @@ export interface ExtractedPdfElements extends Array<ExtractedElement> {
         width: number;
         height: number;
         backgroundColor?: string;
+        hasBackgroundImage?: boolean;
     }>;
     pageBackgroundColors?: Record<number, string>;
     elements: ExtractedElement[];
@@ -235,6 +240,158 @@ function buildTableElement(rows: TextElement[][], pageNumber: number): TableElem
     };
 }
 
+function parseEoFillSubpaths(opsArray: any): { minX: number; minY: number; maxX: number; maxY: number }[] {
+    const subpaths: { minX: number; minY: number; maxX: number; maxY: number }[] = [];
+    if (!opsArray) return subpaths;
+    const arr = Array.isArray(opsArray) && opsArray.length > 0 && opsArray[0]?.length !== undefined
+        ? opsArray[0]
+        : opsArray;
+    let currentBox: { minX: number; minY: number; maxX: number; maxY: number } | null = null;
+    let i = 0;
+    while (i < arr.length) {
+        const op = arr[i];
+        if (op === 0) { // moveTo
+            if (currentBox) subpaths.push(currentBox);
+            const x = arr[i + 1];
+            const y = arr[i + 2];
+            currentBox = { minX: x, minY: y, maxX: x, maxY: y };
+            i += 3;
+        } else if (op === 1) { // lineTo
+            const x = arr[i + 1];
+            const y = arr[i + 2];
+            if (currentBox) {
+                currentBox.minX = Math.min(currentBox.minX, x);
+                currentBox.minY = Math.min(currentBox.minY, y);
+                currentBox.maxX = Math.max(currentBox.maxX, x);
+                currentBox.maxY = Math.max(currentBox.maxY, y);
+            }
+            i += 3;
+        } else if (op === 2) { // curveTo
+            const x = arr[i + 5];
+            const y = arr[i + 6];
+            if (currentBox) {
+                currentBox.minX = Math.min(currentBox.minX, x);
+                currentBox.minY = Math.min(currentBox.minY, y);
+                currentBox.maxX = Math.max(currentBox.maxX, x);
+                currentBox.maxY = Math.max(currentBox.maxY, y);
+            }
+            i += 7;
+        } else if (op === 4) { // closePath
+            i += 1;
+        } else {
+            i++;
+        }
+    }
+    if (currentBox) subpaths.push(currentBox);
+    return subpaths;
+}
+
+/**
+ * Detects whether a text element was intended to be left, center, or right aligned.
+ * Uses:
+ * 1. Sibling alignment in the same vertical column (elements sharing same right/left edge)
+ * 2. Table cell boundary proximity (distance to left vs right grid borders)
+ * 3. Page horizontal centering (e.g. title/heading at pageCenter)
+ * 4. Proximity to page right margin
+ */
+export function detectElementAlignment(
+    item: { x: number; y: number; width?: number; text: string; align?: TextAlignment },
+    allPageTexts: Array<{ x: number; y: number; width?: number; text: string }>,
+    pageWidth: number,
+    verticalLines?: Array<{ x: number; y1: number; y2: number }>
+): TextAlignment {
+    if (item.align) return item.align;
+
+    const width = item.width || 0;
+    const itemRight = item.x + width;
+    const itemCenter = item.x + width / 2;
+    const pageCenter = pageWidth / 2;
+
+    // 1. Page-level horizontal centering (e.g. footers, headers, centered titles)
+    // A footer (y < 80), header (y > 700), or wide centered text block whose center is near pageCenter
+    if (Math.abs(itemCenter - pageCenter) <= 20) {
+        if (item.y < 80 || item.y > 700 || width > 100) {
+            return "center";
+        }
+    }
+
+    // 2. Table cell boundary proximity (if vertical grid lines are provided)
+    if (verticalLines && verticalLines.length >= 2) {
+        const spanLines = verticalLines.filter(
+            (vl) => Math.min(vl.y1, vl.y2) <= item.y + 5 && Math.max(vl.y1, vl.y2) >= item.y - 5
+        );
+        const leftBorders = spanLines.filter((vl) => vl.x <= item.x + 1).map((vl) => vl.x);
+        const rightBorders = spanLines.filter((vl) => vl.x >= itemRight - 1).map((vl) => vl.x);
+
+        if (leftBorders.length > 0 && rightBorders.length > 0) {
+            const nearestLeft = Math.max(...leftBorders);
+            const nearestRight = Math.min(...rightBorders);
+            const cellWidth = nearestRight - nearestLeft;
+
+            if (cellWidth > 40) {
+                const padLeft = item.x - nearestLeft;
+                const padRight = nearestRight - itemRight;
+
+                if (padRight < 25 && padLeft > 35) {
+                    return "right";
+                }
+                if (padLeft < 25 && padRight > 35) {
+                    return "left";
+                }
+                if (Math.abs(padLeft - padRight) < 15 && cellWidth > width + 20) {
+                    return "center";
+                }
+            }
+        }
+    }
+
+    // 3. Column-based alignment with vertically nearby sibling elements (within vertical distance <= 180pt)
+    const nearbyTexts = allPageTexts.filter(
+        (other) => other !== item && Math.abs(other.y - item.y) <= 180 && Math.abs(other.y - item.y) > 8
+    );
+
+    const matchingRight = nearbyTexts.filter(
+        (other) => Math.abs((other.x + (other.width || 0)) - itemRight) <= 3.5
+    );
+
+    const matchingLeft = nearbyTexts.filter(
+        (other) => Math.abs(other.x - item.x) <= 3.5
+    );
+
+    const matchingCenter = nearbyTexts.filter(
+        (other) => Math.abs((other.x + (other.width || 0) / 2) - itemCenter) <= 3.5
+    );
+
+    if (matchingRight.length >= 1 && matchingLeft.length === 0) {
+        return "right";
+    }
+    if (matchingLeft.length >= 1 && matchingRight.length === 0) {
+        return "left";
+    }
+    if (matchingCenter.length >= 1 && matchingLeft.length === 0 && matchingRight.length === 0) {
+        return "center";
+    }
+    if (matchingRight.length > matchingLeft.length && matchingRight.length > matchingCenter.length) {
+        return "right";
+    }
+    if (matchingCenter.length > matchingLeft.length && matchingCenter.length > matchingRight.length) {
+        return "center";
+    }
+
+    // 4. Any other element centered on page
+    if (Math.abs(itemCenter - pageCenter) < 20) {
+        return "center";
+    }
+
+    // 5. Proximity to page right margin
+    if (pageWidth - itemRight < 65 && item.x > pageWidth * 0.6) {
+        return "right";
+    }
+
+    // Default to left-aligned
+    return "left";
+}
+
 // ==========================================
 // Main Extraction Function
 // ==========================================
@@ -261,13 +418,15 @@ export const extractPdfElements = async (params: {
     const rectangles: RectangleElement[] = [];
     const images: ImageElement[] = [];
     const tables: TableElement[] = [];
-    const pagesInfo: Array<{ pageNumber: number; width: number; height: number; backgroundColor?: string }> = [];
+    const pagesInfo: Array<{ pageNumber: number; width: number; height: number; backgroundColor?: string; hasBackgroundImage?: boolean }> = [];
     const pageBackgroundColors: Record<number, string> = {};
 
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
         const page = await pdf.getPage(pageNumber);
         const viewport = page.getViewport({ scale: 1 });
-        let pageBgColor: string = "#faf8f5";
+        let pageBgColor: string = "#ffffff";
+        let fillColorBeforeImage: string | undefined = undefined;
+        let hasLargeBackgroundImage = false;
 
         // -------------------------------------------------------------
         // 1. Extract Text Elements
@@ -323,6 +482,7 @@ export const extractPdfElements = async (params: {
         let currentLineWidth = 1;
         let currentStrokeColor: string | undefined = undefined;
         let currentFillColor: string | undefined = undefined;
+        let showTextIndex = 0;
 
         for (let i = 0; i < opList.fnArray.length; i++) {
             const fn = opList.fnArray[i];
@@ -357,6 +517,19 @@ export const extractPdfElements = async (params: {
                 currentFillColor = normalizeColor(args);
             }
 
+            // Text color tracking: capture active fill color for each text element
+            else if (
+                fn === OPS.showText ||
+                fn === OPS.showSpacedText ||
+                fn === OPS.nextLineShowText ||
+                fn === OPS.nextLineSetSpacingShowText
+            ) {
+                if (showTextIndex < pageTexts.length) {
+                    pageTexts[showTextIndex].color = currentFillColor;
+                    showTextIndex++;
+                }
+            }
+
             // Image Operations
             else if (fn === OPS.paintImageXObject || fn === OPS.paintInlineImageXObject) {
                 const imgId = String(args?.[0] || `img_p${pageNumber}_${i}`);
@@ -366,6 +539,15 @@ export const extractPdfElements = async (params: {
                 const imgH = Math.round(Math.hypot(ctm[2], ctm[3]) * 100) / 100;
 
                 if (imgW > 0 && imgH > 0) {
+                    // Detect large background images (covers > 50% of the page area)
+                    if (imgW >= viewport.width * 0.5 && imgH >= viewport.height * 0.5) {
+                        hasLargeBackgroundImage = true;
+                        // Capture the fill color that was active just before this background image
+                        if (currentFillColor && currentFillColor !== "#000000") {
+                            fillColorBeforeImage = currentFillColor;
+                        }
+                    }
+
                     const imgElement: ImageElement = {
                         type: "image",
                         page: pageNumber,
@@ -408,6 +590,40 @@ export const extractPdfElements = async (params: {
                             pageBgColor = currentFillColor;
                         }
                         continue;
+                    }
+
+                    // Check if this is an even-odd fill (eoFill) simulating a thin line or signature rule
+                    if (action === 23 || action === 25) {
+                        const subpaths = parseEoFillSubpaths(args?.[1]);
+                        if (subpaths.length === 2) {
+                            const dy1 = Math.abs(subpaths[0].minY - subpaths[1].minY);
+                            const dy2 = Math.abs(subpaths[0].maxY - subpaths[1].maxY);
+                            const dx1 = Math.abs(subpaths[0].minX - subpaths[1].minX);
+                            const dx2 = Math.abs(subpaths[0].maxX - subpaths[1].maxX);
+                            const isThinLine = (dy1 <= 3 && dy2 <= 3 && Math.min(dy1, dy2) > 0) ||
+                                               (dx1 <= 3 && dx2 <= 3 && Math.min(dx1, dx2) > 0) ||
+                                               (Math.abs((subpaths[0].maxY - subpaths[0].minY) - (subpaths[1].maxY - subpaths[1].minY)) <= 3);
+                            if (isThinLine) {
+                                const lineEl: LineElement = {
+                                    type: "line",
+                                    page: pageNumber,
+                                    x,
+                                    y,
+                                    x1: x,
+                                    y1: y,
+                                    x2: Math.round((x + w) * 100) / 100,
+                                    y2: y,
+                                    width: w,
+                                    height: Math.max(dy1, dy2, currentLineWidth, 1),
+                                    strokeWidth: Math.max(dy1, dy2, currentLineWidth, 1),
+                                    strokeColor: currentFillColor || currentStrokeColor,
+                                    orientation: "horizontal",
+                                };
+                                lines.push(lineEl);
+                                allElements.push(lineEl);
+                                continue;
+                            }
+                        }
                     }
 
                     // A) Horizontal Line
@@ -473,6 +689,39 @@ export const extractPdfElements = async (params: {
         }
 
         // -------------------------------------------------------------
+        // 2b. Assign bgColor to each text element from containing rectangles
+        // -------------------------------------------------------------
+        const pageRects = rectangles.filter(
+            (r) => r.page === pageNumber && r.isFilled && r.fillColor && r.width > 2 && r.height > 2
+        );
+
+        for (const t of pageTexts) {
+            const textCenterX = t.x + (t.width / 2);
+            const textCenterY = t.y + (t.fontSize / 3);
+
+            // Find all filled rectangles containing this text's center point
+            const containing = pageRects.filter((r) => {
+                // Skip full-page background canvas rectangles
+                if (r.width > 500 && r.height > 700) return false;
+                return (
+                    r.x <= textCenterX &&
+                    r.x + r.width >= textCenterX &&
+                    r.y <= textCenterY &&
+                    r.y + r.height >= textCenterY
+                );
+            });
+
+            if (containing.length > 0) {
+                // Pick the most specific (smallest area) rectangle
+                containing.sort((a, b) => (a.width * a.height) - (b.width * b.height));
+                t.bgColor = containing[0].fillColor;
+            } else {
+                // Fall back to page background color
+                t.bgColor = pageBgColor;
+            }
+        }
+
+        // -------------------------------------------------------------
         // 3. Detect Table Structures from Aligned Texts & Grids
         // -------------------------------------------------------------
         const pageTables = detectTables(pageTexts, pageNumber);
@@ -481,12 +730,30 @@ export const extractPdfElements = async (params: {
             allElements.push(table);
         }
 
+        // -------------------------------------------------------------
+        // 4. Detect Text Alignment (left, center, right)
+        // -------------------------------------------------------------
+        const pageVerticalLines = lines
+            .filter((l) => l.page === pageNumber && l.orientation === "vertical")
+            .map((l) => ({ x: l.x, y1: l.y1, y2: l.y2 }));
+
+        for (const t of pageTexts) {
+            t.align = detectElementAlignment(t, pageTexts, viewport.width, pageVerticalLines);
+        }
+
+        // If no vector background was detected but we found a fill color before a large
+        // background image, use that as the page background color
+        if (pageBgColor === "#ffffff" && fillColorBeforeImage) {
+            pageBgColor = fillColorBeforeImage;
+        }
+
         pageBackgroundColors[pageNumber] = pageBgColor;
         pagesInfo.push({
             pageNumber,
             width: viewport.width,
             height: viewport.height,
             backgroundColor: pageBgColor,
+            hasBackgroundImage: hasLargeBackgroundImage,
         });
     }
 

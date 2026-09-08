@@ -3,6 +3,7 @@ import { asyncHandler } from "@/utils/asyncHandler";
 import { ApiErrors } from '@/utils/errors';
 import documentService from '@/services/document.service';
 import { ok } from '@/utils/response';
+import { DocumentStatus } from '@/models/document.model';
 export const documentController = {
     upload: asyncHandler(async (req: Request, res: Response) => {
         // Read multiple files
@@ -39,6 +40,27 @@ export const documentController = {
         return ok(res, result, "Document processed successfully");
     }),
 
+    transformedDocumentPreview: asyncHandler(async (req: Request, res: Response) => {
+        const documentId = (req.params.id || req.body.documentId) as string;
+        const organizationId = req.headers['x-organization-id'] as string;
+
+        if (!documentId) throw ApiErrors.missingRequiredField('documentId');
+        if (!organizationId) throw ApiErrors.missingRequiredField('organizationId');
+
+        const result = await documentService.getTransformedDocumentPreview(documentId, organizationId);
+        return ok(res, result, "generate transformed document preview successfully");
+    }),
+
+    verifyDocument: asyncHandler(async (req: Request, res: Response) => {
+        const documentId = (req.params.id || req.body.documentId) as string;
+        const organizationId = req.headers['x-organization-id'] as string;
+
+        if (!documentId) throw ApiErrors.missingRequiredField('documentId');
+        if (!organizationId) throw ApiErrors.missingRequiredField('organizationId');
+
+        const result = await documentService.verifyDocument(documentId, organizationId, req.user?._id);
+        return ok(res, result, "Document verified successfully");
+    }),
 
     list: asyncHandler(async (req: Request, res: Response) => {
         const page = parseInt(req.query.page as string) || 1;
@@ -64,15 +86,28 @@ export const documentController = {
         return ok(res, result, 'Document details fetched successfully');
     }),
 
+    updateStatus: asyncHandler(async (req: Request, res: Response) => {
+        const id = req.params.id as string;
+        const organizationId = req.headers['x-organization-id'] as string;
+        const { status = DocumentStatus.EXPORTED } = req.body;
+
+        if (!id) throw ApiErrors.missingRequiredField('Document Id');
+        if (!organizationId) throw ApiErrors.missingRequiredField('organizationId');
+
+        const result = await documentService.updateDocumentStatus(id, organizationId, status, req.user?._id);
+        return ok(res, result, "Document status updated successfully");
+    }),
+
     delete: asyncHandler(async (req: Request, res: Response) => {
         const id = req.params.id as string;
         const organizationId = req.headers['x-organization-id'] as string;
         const userId = req.user?._id as string;
 
-        if (!id) throw ApiErrors.missingRequiredField('Template Id');
+        if (!id) throw ApiErrors.missingRequiredField('Document Id');
+        if (!organizationId) throw ApiErrors.orgIdRequired();
 
         await documentService.deleteDocument(id, organizationId, userId);
 
-        return ok(res, { success: true }, "Template deleted successfully");
+        return ok(res, { success: true }, "Document deleted successfully");
     }),
 }

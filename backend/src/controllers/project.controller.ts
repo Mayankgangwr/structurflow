@@ -30,11 +30,11 @@ export const projectController = {
             name: p.name,
             description: p.description || "",
             status: "Active",
-            documents: 0,
-            processing: 0,
-            needsVerification: 0,
-            successRate: 0,
-            lastActivity: formatRelativeTime(p.updatedAt.toISOString()),
+            documents: p.documents || 0,
+            processing: p.processing || 0,
+            needsVerification: p.needsVerification || 0,
+            successRate: p.successRate || 0,
+            lastActivity: formatRelativeTime(new Date(p.lastActivityDate || p.updatedAt).toISOString()),
             activeTemplateId: p.templateDocumentId ? p.templateDocumentId.toString() : null
         }));
 
@@ -45,19 +45,19 @@ export const projectController = {
         const id = req.params.id as string;
         if (!id) throw ApiErrors.missingRequiredField('Project Id');
         const p = await projectService.getById(id);
-        
+
         const formattedProject = {
             id: p._id.toString(),
             name: p.name,
             description: p.description || "",
             status: "Active",
-            documents: 0,
-            processing: 0,
-            needsVerification: 0,
-            successRate: 0,
-            lastActivity: formatRelativeTime(p.updatedAt.toISOString()),
+            documents: p.documents || 0,
+            processing: p.processing || 0,
+            needsVerification: p.needsVerification || 0,
+            successRate: p.successRate || 0,
+            lastActivity: formatRelativeTime(new Date(p.lastActivityDate || p.updatedAt).toISOString()),
             activeTemplateId: p.templateDocumentId ? (p.templateDocumentId as any)._id?.toString() || p.templateDocumentId.toString() : null,
-            templateData: p.templateDocumentId && (p.templateDocumentId as any)._id ? p.templateDocumentId : null
+            templateData: p.templateData || (p.templateDocumentId && (p.templateDocumentId as any)._id ? p.templateDocumentId : null)
         };
 
         return ok(res, formattedProject, "Project fetched successfully");

@@ -4,7 +4,7 @@ import fs from "fs/promises";
 import path from "path";
 import os from "os";
 import crypto from "crypto";
-import { PDFParse } from "pdf-parse";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { gemini } from "@/config/gemini";
 import generatePdfFromTemplate, { PdfTextElement, GeneratePdfOptions } from "@/utils/generatePdfFromTemplate";
 
@@ -93,26 +93,40 @@ class PdfService {
      * @returns The extracted text content
      */
     async extractTextFromPdf(pdfSource: string | Buffer): Promise<string> {
-        let parser: PDFParse | undefined;
-
         try {
+            let buffer: Buffer;
             if (Buffer.isBuffer(pdfSource)) {
-                parser = new PDFParse({ data: new Uint8Array(pdfSource) });
+                buffer = pdfSource;
             } else if (pdfSource.startsWith('http://') || pdfSource.startsWith('https://')) {
-                parser = new PDFParse({ url: pdfSource });
+                const res = await fetch(pdfSource);
+                if (!res.ok) throw new Error(`HTTP error ${res.status}: ${res.statusText}`);
+                const arrayBuffer = await res.arrayBuffer();
+                buffer = Buffer.from(arrayBuffer);
             } else {
-                const buffer = await fs.readFile(pdfSource);
-                parser = new PDFParse({ data: new Uint8Array(buffer) });
+                buffer = await fs.readFile(pdfSource);
             }
 
-            const result = await parser.getText();
-            return result.text;
+            const pdf = await pdfjsLib.getDocument({
+                data: new Uint8Array(buffer),
+                useSystemFonts: true,
+            }).promise;
+
+            const textChunks: string[] = [];
+            for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+                const page = await pdf.getPage(pageNumber);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items
+                    .filter((item: any) => "str" in item)
+                    .map((item: any) => item.str)
+                    .join(" ");
+                if (pageText.trim()) {
+                    textChunks.push(pageText.trim());
+                }
+            }
+
+            return textChunks.join("\n\n");
         } catch (error: any) {
             throw new Error(`Failed to extract text from PDF: ${error.message}`);
-        } finally {
-            if (parser) {
-                await parser.destroy();
-            }
         }
     }
 

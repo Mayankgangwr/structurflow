@@ -1,4 +1,7 @@
 import { baseApi } from "@/services/baseApi";
+import { Star } from "lucide-react";
+
+export type DocumentStatus = 'UPLOADED' | 'PROCESSING' | 'REVIEW_REQUIRED' | 'TRUSTED' | 'TRANSFORMED' | 'VERIFIED' | 'REJECTED' | 'FAILED' | 'EXPORTED';
 
 export interface Document {
     _id: string;
@@ -7,7 +10,7 @@ export interface Document {
     mimeType: string;
     secureUrl: string;
     sizeBytes: number;
-    status: 'UPLOADED' | 'PROCESSING' | 'REVIEW_REQUIRED' | 'TRUSTED' | 'TRANSFORMED' | 'REJECTED' | 'FAILED';
+    status: DocumentStatus;
     createdAt: string;
     processingDetails?: any;
 }
@@ -27,6 +30,23 @@ export const documentApi = baseApi.injectEndpoints({
                 method: 'GET',
             }),
             providesTags: ['Documents'],
+        }),
+
+        getDocumentPreview: builder.query<{ success: boolean; data: any }, string>({
+            query: (documentId) => ({
+                url: `/documents/transform-preview/${documentId}`,
+                method: 'GET',
+            }),
+            providesTags: ['Documents'],
+        }),
+
+        exportDocument: builder.mutation<{ success: boolean; data: string }, string>({
+            query: (documentId) => ({
+                url: `/documents/export/${documentId}`,
+                method: 'PUT',
+                body: { status: "EXPORTED" },
+            }),
+            invalidatesTags: ['Documents'],
         }),
 
         getDocumentsSummary: builder.query<{ success: boolean; data: { TOTAL: number, UPLOADED: number, TRANSFORMED: number, VERIFIED: number, REJECTED: number, EXPORTED: number } }, { projectId: string }>({
@@ -69,6 +89,15 @@ export const documentApi = baseApi.injectEndpoints({
                 invalidatesTags: ['Documents'],
             }),
 
+        verifyDocument: builder.mutation<{ success: boolean; data: any }, { documentId: string; status?: string }>({
+            query: ({ documentId, status }) => ({
+                url: `/documents/verify/${documentId}`,
+                method: 'PUT',
+                body: { status: status || "VERIFIED" },
+            }),
+            invalidatesTags: ['Documents'],
+        }),
+
         processDocument: builder.mutation<{ success: boolean; data: any }, { documentId: string }>({
             query: ({ documentId }) => ({
                 url: `/documents/process`,
@@ -78,14 +107,24 @@ export const documentApi = baseApi.injectEndpoints({
             invalidatesTags: ['Documents'],
         }),
 
-
+        deleteDocument: builder.mutation<{ success: boolean; data: any }, string>({
+            query: (documentId) => ({
+                url: `/documents/${documentId}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Documents'],
+        }),
     }),
 });
 
 export const {
     useGetDocumentsQuery,
+    useGetDocumentPreviewQuery,
     useGetDocumentsSummaryQuery,
     useGetDocumentByIdQuery,
     useUploadDocumentMutation,
-    useProcessDocumentMutation
+    useProcessDocumentMutation,
+    useVerifyDocumentMutation,
+    useExportDocumentMutation,
+    useDeleteDocumentMutation
 } = documentApi;
