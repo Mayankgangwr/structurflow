@@ -83,6 +83,7 @@ export const ApiErrors = {
     duplicateTemplate: () => new ConflictError('Template already exists', [{ code: 'DUPLICATE_TEMPLATE', message: 'A template with this exact file already exists in the organization.' }]),
 
     // --- Generic ---
+    notFound: (message = 'Resource not found', code = 'NOT_FOUND') => new EntityNotFoundError(message, [{ code, message }]),
     badRequest: (message: string, code = 'BAD_REQUEST') => new BadRequestError(message, [{ code, message }]),
     missingRequiredField: (field: string) => new ValidationError(`${field} is required`, [{ field, code: 'REQUIRED_FIELD', message: `${field} is required.` }]),
     orgIdRequired: () => new ValidationError('Organization ID is required', [{ code: 'ORG_ID_REQUIRED', message: 'The X-Organization-Id header or orgId parameter is required.' }]),

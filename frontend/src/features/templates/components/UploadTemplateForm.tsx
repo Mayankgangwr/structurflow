@@ -5,6 +5,8 @@ import { useUploadTemplate } from "../hooks/useUploadTemplate";
 import { Loader2, Upload, FileIcon, FileText, Image as ImageIcon, CheckCircle, Trash2 } from "lucide-react";
 import { formatSize } from "@/lib/utils";
 
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
+
 export interface IUploadTemplateFormProps {
     isOpen: boolean;
     onClose: () => void;
@@ -12,6 +14,7 @@ export interface IUploadTemplateFormProps {
 };
 
 const UploadTemplateForm: React.FC<IUploadTemplateFormProps> = ({ isOpen, onClose, projectId }) => {
+    const { can } = usePermissions();
     const { uploadFile, isLoading, isError, error } = useUploadTemplate(projectId);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -25,7 +28,7 @@ const UploadTemplateForm: React.FC<IUploadTemplateFormProps> = ({ isOpen, onClos
         }
     }, [isOpen]);
 
-    if (!isOpen) return null;
+    if (!isOpen || !can("manage_templates")) return null;
 
     const handleFileAdded = (file: File) => {
         setSelectedFile(file);

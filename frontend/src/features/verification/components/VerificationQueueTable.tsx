@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { normalizeExtractedFields, getPreviewFields } from "../utils/extractedFields";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 export interface VerificationQueueTableProps {
     documents: Document[];
@@ -81,38 +82,44 @@ const VerificationQueueTable: React.FC<VerificationQueueTableProps> = ({
     onRejectDocument,
     processingDocId,
 }) => {
+    const { can } = usePermissions();
+    const canVerify = can("verify_documents");
     const isAllSelected = documents.length > 0 && documents.every((d) => selectedIds.has(d._id));
     const isSomeSelected = selectedIds.size > 0 && !isAllSelected;
 
     const columns: DataTableColumn<Document>[] = [
-        {
-            id: "select",
-            header: (
-                <div className="flex items-center justify-center">
-                    <input
-                        type="checkbox"
-                        checked={isAllSelected}
-                        ref={(el) => {
-                            if (el) el.indeterminate = isSomeSelected;
-                        }}
-                        onChange={onToggleSelectAll}
-                        className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 cursor-pointer"
-                        title="Select all documents on this page"
-                    />
-                </div>
-            ),
-            className: "w-10 text-center px-3",
-            cell: (doc) => (
-                <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                    <input
-                        type="checkbox"
-                        checked={selectedIds.has(doc._id)}
-                        onChange={() => onToggleSelect(doc._id)}
-                        className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 cursor-pointer"
-                    />
-                </div>
-            ),
-        },
+        ...(canVerify
+            ? [
+                  {
+                      id: "select",
+                      header: (
+                          <div className="flex items-center justify-center">
+                              <input
+                                  type="checkbox"
+                                  checked={isAllSelected}
+                                  ref={(el) => {
+                                      if (el) el.indeterminate = isSomeSelected;
+                                  }}
+                                  onChange={onToggleSelectAll}
+                                  className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 cursor-pointer"
+                                  title="Select all documents on this page"
+                              />
+                          </div>
+                      ),
+                      className: "w-10 text-center px-3",
+                      cell: (doc: Document) => (
+                          <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                  type="checkbox"
+                                  checked={selectedIds.has(doc._id)}
+                                  onChange={() => onToggleSelect(doc._id)}
+                                  className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 cursor-pointer"
+                              />
+                          </div>
+                      ),
+                  } as DataTableColumn<Document>,
+              ]
+            : []),
         {
             id: "document",
             header: "Document",
@@ -252,8 +259,8 @@ const VerificationQueueTable: React.FC<VerificationQueueTableProps> = ({
                             <span>Review</span>
                         </Button>
 
-                        {/* Quick Approve Button (if not already verified) */}
-                        {doc.status !== "VERIFIED" && doc.status !== "EXPORTED" && (
+                        {/* Quick Approve Button (if not already verified and user has verify permission) */}
+                        {canVerify && doc.status !== "VERIFIED" && doc.status !== "EXPORTED" && (
                             <Button
                                 variant="outline"
                                 size="icon-sm"
@@ -270,8 +277,8 @@ const VerificationQueueTable: React.FC<VerificationQueueTableProps> = ({
                             </Button>
                         )}
 
-                        {/* Reject Button */}
-                        {doc.status !== "REJECTED" && (
+                        {/* Reject Button (if user has verify permission) */}
+                        {canVerify && doc.status !== "REJECTED" && (
                             <Button
                                 variant="outline"
                                 size="icon-sm"

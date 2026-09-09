@@ -101,6 +101,7 @@
   --color-on-tertiary-fixed: #002113;
 
   /* Spacing */
+  --spacing-container-max: 440px;
   --spacing-lg: 24px;
   --spacing-margin: 32px;
   --spacing-base: 8px;

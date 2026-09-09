@@ -6,6 +6,7 @@ import { cn, formatDate, formatSize, getFileType } from "@/lib/utils";
 import { Eye, FileText, Download, Sparkles, FileCheck, Trash2, Loader2, FileImage, Folder } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 export interface DocumentCardProps {
     document: Document & { projectId?: { _id: string; name: string } | string };
@@ -74,7 +75,8 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
     onVerifyOrExport,
     onDelete,
 }) => {
-    const fileName = document.originalFileName || document.originalFilename;
+    const { can } = usePermissions();
+    const fileName = document.originalFileName || document.originalFilename || "Untitled Document";
     const isImage = document.mimeType?.includes("image");
     const isPdf = document.mimeType?.includes("pdf") || fileName?.toLowerCase().endsWith(".pdf");
 
@@ -179,7 +181,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
 
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     {/* Transform button for UPLOADED */}
-                    {document.status === "UPLOADED" && (
+                    {document.status === "UPLOADED" && can("verify_documents") && (
                         <Button
                             type="button"
                             title="Transform Document"
@@ -217,14 +219,16 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
                             )}
                         </Button>
                     )}
-                    {/* Delete button */}
-                    <Button
-                        variant="outline"
-                        onClick={() => onDelete(document._id)}
-                        className="text-error hover:text-error transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
-                        size={"icon-sm"}>
-                        <Trash2 className="h-5 w-5 text-error/70 hover:text-error" />
-                    </Button>
+                    {/* Delete button (gated for OWNER / ADMIN) */}
+                    {can("delete_documents") && (
+                        <Button
+                            variant="outline"
+                            onClick={() => onDelete(document._id)}
+                            className="text-error hover:text-error transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
+                            size={"icon-sm"}>
+                            <Trash2 className="h-5 w-5 text-error/70 hover:text-error" />
+                        </Button>
+                    )}
                 </div>
             </div>
         </div >

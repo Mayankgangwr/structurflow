@@ -20,8 +20,11 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, ShieldCheck, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 const VerificationWorkspace: React.FC = () => {
+    const { can } = usePermissions();
+    const canVerify = can("verify_documents");
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [searchQuery, setSearchQuery] = useState("");
@@ -287,6 +290,21 @@ const VerificationWorkspace: React.FC = () => {
                 </div>
             </div>
 
+            {/* Auditor Mode Banner for Viewers */}
+            {!canVerify && (
+                <div className="flex items-center gap-3 p-3.5 bg-blue-50/90 border border-blue-200/80 rounded-xl text-xs text-blue-900 shadow-2xs">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                        <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-blue-950">Auditor Mode (Read-Only)</h4>
+                        <p className="text-blue-800/80 mt-0.5">
+                            You have viewer privileges. You can review and inspect extracted schemas, but verification sign-off and rejection actions are restricted to Reviewers and Admins.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* KPI Metric Cards */}
             <VerificationKPIHeader
                 stats={stats}
@@ -349,16 +367,18 @@ const VerificationWorkspace: React.FC = () => {
                     </div>
                 ) : viewMode === "grid" ? (
                     <div className="space-y-2.5">
-                        <VerificationGridSelectionBar
-                            totalDocuments={documents.length}
-                            selectedCount={selectedIds.size}
-                            isAllSelected={isAllSelected}
-                            isSomeSelected={isSomeSelected}
-                            onToggleSelectAll={handleToggleSelectAll}
-                            onClearSelection={() => setSelectedIds(new Set())}
-                            onBulkApprove={handleBulkApprove}
-                            isBulkVerifying={isBulkVerifying}
-                        />
+                        {canVerify && (
+                            <VerificationGridSelectionBar
+                                totalDocuments={documents.length}
+                                selectedCount={selectedIds.size}
+                                isAllSelected={isAllSelected}
+                                isSomeSelected={isSomeSelected}
+                                onToggleSelectAll={handleToggleSelectAll}
+                                onClearSelection={() => setSelectedIds(new Set())}
+                                onBulkApprove={handleBulkApprove}
+                                isBulkVerifying={isBulkVerifying}
+                            />
+                        )}
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                             {documents.map((doc, index) => (
@@ -377,17 +397,19 @@ const VerificationWorkspace: React.FC = () => {
                     </div>
                 ) : (
                     <div className="space-y-2.5">
-                        <VerificationGridSelectionBar
-                            totalDocuments={documents.length}
-                            selectedCount={selectedIds.size}
-                            isAllSelected={isAllSelected}
-                            isSomeSelected={isSomeSelected}
-                            onToggleSelectAll={handleToggleSelectAll}
-                            onClearSelection={() => setSelectedIds(new Set())}
-                            onBulkApprove={handleBulkApprove}
-                            isBulkVerifying={isBulkVerifying}
-                            showWhenZero={false}
-                        />
+                        {canVerify && (
+                            <VerificationGridSelectionBar
+                                totalDocuments={documents.length}
+                                selectedCount={selectedIds.size}
+                                isAllSelected={isAllSelected}
+                                isSomeSelected={isSomeSelected}
+                                onToggleSelectAll={handleToggleSelectAll}
+                                onClearSelection={() => setSelectedIds(new Set())}
+                                onBulkApprove={handleBulkApprove}
+                                isBulkVerifying={isBulkVerifying}
+                                showWhenZero={false}
+                            />
+                        )}
 
                         <VerificationQueueTable
                             documents={documents}

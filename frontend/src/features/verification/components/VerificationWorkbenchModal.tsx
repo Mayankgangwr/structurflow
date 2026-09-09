@@ -20,11 +20,13 @@ import {
     Code,
     FileCheck2,
     AlertTriangle,
-    Eye
+    Eye,
+    ShieldCheck,
 } from "lucide-react";
 import { cn, formatSize, getFileType } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { normalizeExtractedFields, ExtractedFieldItem } from "../utils/extractedFields";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 export interface VerificationWorkbenchModalProps {
     isOpen: boolean;
@@ -53,6 +55,8 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
     isApproving = false,
     isRejecting = false,
 }) => {
+    const { can } = usePermissions();
+    const canVerify = can("verify_documents");
     const [activeTab, setActiveTab] = useState<"fields" | "preview" | "json">("fields");
     const [fieldSearch, setFieldSearch] = useState("");
     const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -424,34 +428,41 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
 
                 {/* Footer Action Bar */}
                 <div className="px-5 py-3 border-t border-slate-200 bg-slate-50/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={isRejecting || isApproving}
-                            onClick={() => setIsRejectDialogOpen(true)}
-                            className="text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 text-xs font-semibold cursor-pointer h-9 px-3"
-                        >
-                            <X className="w-4 h-4 mr-1" />
-                            Reject Document
-                        </Button>
+                    {!canVerify ? (
+                        <div className="flex items-center gap-2 text-xs font-medium text-slate-600 bg-slate-100/90 border border-slate-200 px-3 py-1.5 rounded-lg">
+                            <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                            <span>Auditor Mode (Read-Only Access)</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={isRejecting || isApproving}
+                                onClick={() => setIsRejectDialogOpen(true)}
+                                className="text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 text-xs font-semibold cursor-pointer h-9 px-3"
+                            >
+                                <X className="w-4 h-4 mr-1" />
+                                Reject Document
+                            </Button>
 
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={isReprocessing || isApproving}
-                            onClick={handleReprocess}
-                            className="text-slate-600 border-slate-200 hover:bg-slate-100 text-xs font-semibold cursor-pointer h-9 px-3"
-                            title="Re-run AI extraction pipeline"
-                        >
-                            {isReprocessing ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                            ) : (
-                                <Sparkles className="w-3.5 h-3.5 text-amber-500 mr-1.5" />
-                            )}
-                            Re-process
-                        </Button>
-                    </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={isReprocessing || isApproving}
+                                onClick={handleReprocess}
+                                className="text-slate-600 border-slate-200 hover:bg-slate-100 text-xs font-semibold cursor-pointer h-9 px-3"
+                                title="Re-run AI extraction pipeline"
+                            >
+                                {isReprocessing ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                                ) : (
+                                    <Sparkles className="w-3.5 h-3.5 text-amber-500 mr-1.5" />
+                                )}
+                                Re-process
+                            </Button>
+                        </div>
+                    )}
 
                     <div className="flex items-center gap-2 justify-end">
                         <Button
@@ -463,27 +474,29 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                             Close
                         </Button>
 
-                        {/* APPROVE & NEXT Primary Action */}
-                        <Button
-                            size="sm"
-                            disabled={isApproving || isRejecting}
-                            onClick={handleApproveAndNext}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold h-9 px-4 rounded-lg shadow-sm cursor-pointer flex items-center gap-1.5"
-                        >
-                            {isApproving ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    <span>Verifying...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <CheckCircle2 className="w-4 h-4" />
-                                    <span>
-                                        {currentIndex < totalInQueue - 1 ? "Approve & Next" : "Approve & Finish"}
-                                    </span>
-                                </>
-                            )}
-                        </Button>
+                        {/* APPROVE & NEXT Primary Action (gated for operators) */}
+                        {canVerify && (
+                            <Button
+                                size="sm"
+                                disabled={isApproving || isRejecting}
+                                onClick={handleApproveAndNext}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold h-9 px-4 rounded-lg shadow-sm cursor-pointer flex items-center gap-1.5"
+                            >
+                                {isApproving ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span>Verifying...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        <span>
+                                            {currentIndex < totalInQueue - 1 ? "Approve & Next" : "Approve & Finish"}
+                                        </span>
+                                    </>
+                                )}
+                            </Button>
+                        )}
                     </div>
                 </div>
             </Dialog>

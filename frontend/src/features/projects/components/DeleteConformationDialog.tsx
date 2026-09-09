@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { TriangleAlert, Info, FileText, Folder } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 interface IDeleteConformationDialogProps {
     isOpen: boolean;
@@ -14,8 +15,11 @@ interface IDeleteConformationDialogProps {
 }
 
 const DeleteConformationDialog: React.FC<IDeleteConformationDialogProps> = ({ isOpen, onClose, onDelete, project }) => {
+    const { can } = usePermissions();
     const [confirmName, setConfirmName] = useState("");
     const isConfirmValid = confirmName === project.name;
+
+    if (!isOpen || !can("delete_project")) return null;
 
     return (
         <Dialog

@@ -92,15 +92,19 @@ export const projectController = {
     updateById: asyncHandler(async (req: Request, res: Response) => {
         const id = req.params.id as string;
         if (!id) throw ApiErrors.missingRequiredField('Project Id');
+        const orgId = req.headers['x-organization-id'] as string;
+        const userId = req.user?._id;
         const { name, description } = req.body;
-        const project = await projectService.updateById(id, name, description);
+        const project = await projectService.updateById(id, name, description, orgId, userId);
         return ok(res, project, "Project updated successfully");
     }),
 
     delete: asyncHandler(async (req: Request, res: Response) => {
         const id = req.params.id as string;
         if (!id) throw ApiErrors.missingRequiredField('Project Id');
-        const project = await projectService.deleteProject(id);
+        const orgId = req.headers['x-organization-id'] as string;
+        const userId = req.user?._id;
+        const project = await projectService.deleteProject(id, orgId, userId);
         return ok(res, project, "Project deleted successfully");
     })
 }

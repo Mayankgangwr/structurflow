@@ -22,6 +22,7 @@ import {
     normalizeExtractedFields,
     getPreviewFields,
 } from "../utils/extractedFields";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 export interface VerificationCardProps {
     document: Document & { projectId?: { _id: string; name: string } | string };
@@ -81,6 +82,8 @@ const VerificationCard: React.FC<VerificationCardProps> = ({
     onReject,
     isProcessing = false,
 }) => {
+    const { can } = usePermissions();
+    const canVerify = can("verify_documents");
     const fileName = document.originalFileName || document.originalFilename;
     const isImage = document.mimeType?.includes("image");
     const isPdf = document.mimeType?.includes("pdf") || fileName?.toLowerCase().endsWith(".pdf");
@@ -123,8 +126,8 @@ const VerificationCard: React.FC<VerificationCardProps> = ({
             <div className="space-y-3">
                 {/* Top Row: Checkbox + Icon + Filename + Badges */}
                 <div className="flex items-start gap-3">
-                    {/* Checkbox */}
-                    {onToggleSelect && (
+                    {/* Checkbox (gated for operators with verification permissions) */}
+                    {canVerify && onToggleSelect && (
                         <div
                             className="pt-1 shrink-0"
                             onClick={(e) => {
@@ -279,37 +282,39 @@ const VerificationCard: React.FC<VerificationCardProps> = ({
                     <span>Review Document</span>
                 </Button>
 
-                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                    {/* Quick Approve Button */}
-                    {document.status !== "VERIFIED" && document.status !== "EXPORTED" && (
-                        <button
-                            type="button"
-                            disabled={isProcessing}
-                            onClick={() => onQuickApprove(document._id)}
-                            className="w-8 h-8 rounded-lg border border-emerald-200/90 bg-emerald-50/80 text-emerald-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all duration-150 shadow-2xs flex items-center justify-center cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Quick Approve (1-click sign-off)"
-                        >
-                            {isProcessing ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
-                            ) : (
-                                <Check className="w-4 h-4 stroke-[2.5]" />
-                            )}
-                        </button>
-                    )}
+                {canVerify && (
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        {/* Quick Approve Button */}
+                        {document.status !== "VERIFIED" && document.status !== "EXPORTED" && (
+                            <button
+                                type="button"
+                                disabled={isProcessing}
+                                onClick={() => onQuickApprove(document._id)}
+                                className="w-8 h-8 rounded-lg border border-emerald-200/90 bg-emerald-50/80 text-emerald-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all duration-150 shadow-2xs flex items-center justify-center cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Quick Approve (1-click sign-off)"
+                            >
+                                {isProcessing ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                                ) : (
+                                    <Check className="w-4 h-4 stroke-[2.5]" />
+                                )}
+                            </button>
+                        )}
 
-                    {/* Reject Button */}
-                    {document.status !== "REJECTED" && (
-                        <button
-                            type="button"
-                            disabled={isProcessing}
-                            onClick={() => onReject(document)}
-                            className="w-8 h-8 rounded-lg border border-rose-200/90 bg-rose-50/80 text-rose-600 hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all duration-150 shadow-2xs flex items-center justify-center cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Reject / Flag document"
-                        >
-                            <X className="w-4 h-4 stroke-[2.5]" />
-                        </button>
-                    )}
-                </div>
+                        {/* Reject Button */}
+                        {document.status !== "REJECTED" && (
+                            <button
+                                type="button"
+                                disabled={isProcessing}
+                                onClick={() => onReject(document)}
+                                className="w-8 h-8 rounded-lg border border-rose-200/90 bg-rose-50/80 text-rose-600 hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all duration-150 shadow-2xs flex items-center justify-center cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Reject / Flag document"
+                            >
+                                <X className="w-4 h-4 stroke-[2.5]" />
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

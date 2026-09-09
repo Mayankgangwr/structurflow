@@ -1,5 +1,6 @@
 import { useUploadDocument } from "@/features/documents/hooks/useUploadDocument";
-import { Upload, Loader2 } from "lucide-react";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
+import { Upload, Loader2, FileText } from "lucide-react";
 import React, { useRef, useState } from "react";
 
 export interface IUploadDocumentProps {
@@ -7,9 +8,24 @@ export interface IUploadDocumentProps {
 }
 
 const UploadDocument: React.FC<IUploadDocumentProps> = ({ projectId }) => {
+    const { can } = usePermissions();
     const { uploadFiles, isLoading, isError, error } = useUploadDocument(projectId);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isDragging, setIsDragging] = useState(false);
+
+    if (!can("upload_documents")) {
+        return (
+            <div className="flex-1 w-full border border-border-subtle rounded-xl p-xl flex flex-col items-center justify-center text-center gap-md min-h-[250px] lg:min-h-[300px] bg-surface">
+                <div className="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center text-secondary mb-sm">
+                    <FileText className="w-8 h-8 text-secondary" />
+                </div>
+                <div className="flex flex-col gap-xs">
+                    <p className="font-body-md text-body-md text-text-primary">No Documents Uploaded</p>
+                    <p className="font-label-sm text-label-sm text-secondary">There are no documents uploaded to this project yet.</p>
+                </div>
+            </div>
+        );
+    }
 
     const handleFile = async (file: File) => {
         try {

@@ -5,6 +5,7 @@ import { Loader2, Download } from 'lucide-react';
 import { useGetDocumentPreviewQuery, useGetDocumentByIdQuery, useExportDocumentMutation, useVerifyDocumentMutation } from '../documentApi';
 import PdfViewer from '@/components/ui/pdf-viewer';
 import toast from 'react-hot-toast';
+import { usePermissions } from '@/features/auth/hooks/usePermissions';
 
 interface Props {
     documentId: string | null;
@@ -13,6 +14,7 @@ interface Props {
 }
 
 const TransformedDocumentPreviewDialog: React.FC<Props> = ({ documentId, isOpen, onClose }) => {
+    const { can } = usePermissions();
     const { data: previewRes, isLoading, isError } = useGetDocumentPreviewQuery(documentId || '', {
         skip: !isOpen || !documentId
     });
@@ -95,14 +97,16 @@ const TransformedDocumentPreviewDialog: React.FC<Props> = ({ documentId, isOpen,
                             Export PDF
                         </Button>
                     ) : (
-                        <Button
-                            onClick={handleVerify}
-                            disabled={isLoading || isError || isVerifyLoading || isExportLoading}
-                            className="bg-primary hover:bg-primary/90 text-white flex items-center gap-2"
-                        >
-                            {isVerifyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                            Verify
-                        </Button>
+                        can("verify_documents") && (
+                            <Button
+                                onClick={handleVerify}
+                                disabled={isLoading || isError || isVerifyLoading || isExportLoading}
+                                className="bg-primary hover:bg-primary/90 text-white flex items-center gap-2 cursor-pointer"
+                            >
+                                {isVerifyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                                Verify
+                            </Button>
+                        )
                     )}
 
                 </div>

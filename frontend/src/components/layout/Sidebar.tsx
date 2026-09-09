@@ -21,6 +21,8 @@ import { usePathname } from "next/navigation";
 import ProjectForm from "../../features/projects/components/ProjectForm";
 import { useAppSelector } from "@/store/hooks";
 import { useGetProjectsQuery } from "@/features/projects/projectApi";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
+import { cn } from "@/lib/utils";
 
 interface SidebarProps {
     children?: React.ReactNode;
@@ -33,6 +35,7 @@ const Sidebar: React.FC<SidebarProps> = () => {
     const [isTablet, setIsTablet] = useState(false);
     const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
 
+    const { role, can } = usePermissions();
     const user = useAppSelector((state) => state.auth.user);
     const { data: projectsData } = useGetProjectsQuery();
 
@@ -105,14 +108,16 @@ const Sidebar: React.FC<SidebarProps> = () => {
                 )}
             </div>
 
-            {/* New Project Action Button */}
-            <Button
-                className={`bg-primary !text-white hover:!text-white mb-md font-label-md hover:bg-primary-container transition-colors shrink-0 ${isCollapsed ? "w-9 h-9 rounded-sm p-0 mx-auto flex items-center justify-center" : "w-full rounded-md py-2 px-4 text-label-md"}`}
-                title={isCollapsed ? "New Project" : undefined}
-                onClick={() => setIsProjectFormOpen(true)}
-            >
-                {isCollapsed ? <Plus className="h-5 w-5" /> : "New Project"}
-            </Button>
+            {/* New Project Action Button (gated for OWNER / ADMIN) */}
+            {can("create_project") && (
+                <Button
+                    className={`bg-primary text-white! hover:text-white! mb-md font-label-md hover:bg-primary-container transition-colors shrink-0 ${isCollapsed ? "w-9 h-9 rounded-sm p-0 mx-auto flex items-center justify-center" : "w-full rounded-md py-2 px-4 text-label-md"}`}
+                    title={isCollapsed ? "New Project" : undefined}
+                    onClick={() => setIsProjectFormOpen(true)}
+                >
+                    {isCollapsed ? <Plus className="h-5 w-5" /> : "New Project"}
+                </Button>
+            )}
 
             {/* Nav Menu Content */}
             <div className="flex h-full w-full flex-col items-start justify-between overflow-y-auto no-scrollbar">
@@ -223,16 +228,29 @@ const Sidebar: React.FC<SidebarProps> = () => {
                     )}
 
                     {/* User Profile */}
-                    <div className={`mt-1 flex items-center gap-3 py-1.5 bg-surface-container-lowest w-full rounded-md ${isCollapsed ? "justify-center px-0" : "px-2"}`}>
+                    <div className={`mt-1 flex items-center gap-2.5 py-1.5 bg-surface-container-lowest w-full rounded-md ${isCollapsed ? "justify-center px-0" : "px-2"}`}>
                         <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs border border-primary/20">
                             {initials}
                         </div>
 
                         {!isCollapsed && (
                             <div className="min-w-0 flex-1">
-                                <p className="truncate font-label-md text-label-md text-text-primary">
-                                    {fullName}
-                                </p>
+                                <div className="flex items-center justify-between gap-1">
+                                    <p className="truncate font-label-md text-xs font-semibold text-text-primary">
+                                        {fullName}
+                                    </p>
+                                    {role && (
+                                        <span className={cn(
+                                            "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded border shrink-0",
+                                            role === "OWNER" && "bg-amber-50 text-amber-700 border-amber-200",
+                                            role === "ADMIN" && "bg-blue-50 text-blue-700 border-blue-200",
+                                            role === "REVIEWER" && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                            role === "VIEWER" && "bg-slate-50 text-slate-600 border-slate-200"
+                                        )}>
+                                            {role}
+                                        </span>
+                                    )}
+                                </div>
                                 <p className="truncate text-[10px] text-secondary">
                                     {email}
                                 </p>

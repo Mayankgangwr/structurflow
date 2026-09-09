@@ -11,6 +11,7 @@ import { Button } from "@base-ui/react/button";
 import PdfPreviewDialog from "@/components/documents/PdfPreviewDialog";
 import HtmlPreviewDialog from "@/components/documents/HtmlPreviewDialog";
 import UploadTemplateForm from "@/features/templates/components/UploadTemplateForm";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 export interface IDocumentSectionProps {
     activeTemplate: Template;
@@ -18,6 +19,7 @@ export interface IDocumentSectionProps {
 };
 
 const DocumentSection: React.FC<IDocumentSectionProps> = ({ activeTemplate, hasDocuments }) => {
+    const { can } = usePermissions();
     const [isPreveiwTemplte, setIsPreveiwTemplte] = useState(false);
     const [isHtmlPreview, setIsHtmlPreview] = useState(false);
     const [proccessTemplateMutation, { isLoading, isError, error }] = useProccessTemplateMutation();
@@ -67,12 +69,12 @@ const DocumentSection: React.FC<IDocumentSectionProps> = ({ activeTemplate, hasD
                             </div>
                         </div>
                         <div className="flex items-center justify-between border-t border-border-subtle pt-xs mt-xs">
-                            {status === "UPLOADED" || status === "FAILED" ? (
+                            {(status === "UPLOADED" || status === "FAILED") && can("manage_templates") ? (
                                 <Button
                                     onClick={() => handleProccessTemplate(_id)}
-                                    className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
-                                    title="Preview">
-                                    {isLoading ? <Loader2 /> : <Sparkles />}
+                                    className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container cursor-pointer"
+                                    title="Process Template">
+                                    {isLoading ? <Loader2 className="animate-spin" /> : <Sparkles />}
                                 </Button>
                             ) : (
                                 <span
@@ -80,33 +82,34 @@ const DocumentSection: React.FC<IDocumentSectionProps> = ({ activeTemplate, hasD
                                     <span className="w-2 h-2 rounded-full bg-tertiary-fixed-dim"></span>
                                     Status: {status || 'Ready'}
                                 </span>
-
                             )}
                             <div className="flex items-center gap-sm">
                                 <Button
                                     onClick={() => setIsPreveiwTemplte(true)}
-                                    className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
+                                    className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container cursor-pointer"
                                     title="Preview PDF">
                                     <Eye />
                                 </Button>
                                 {activeTemplate.htmlContent && (
                                     <Button
                                         onClick={() => setIsHtmlPreview(true)}
-                                        className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
+                                        className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container cursor-pointer"
                                         title="Preview HTML">
                                         <LayoutTemplate />
                                     </Button>
                                 )}
-                                <Button
-                                    className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
-                                    title="Replace"
-                                    onClick={() => setIsReplaceTemplate(true)}
-                                >
-                                    <div className="relative">
-                                        <FileText size={20} />
-                                        <RefreshCw size={14} className="absolute -bottom-1 -right-1" />
-                                    </div>
-                                </Button>
+                                {can("manage_templates") && (
+                                    <Button
+                                        className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container cursor-pointer"
+                                        title="Replace Template"
+                                        onClick={() => setIsReplaceTemplate(true)}
+                                    >
+                                        <div className="relative">
+                                            <FileText size={20} />
+                                            <RefreshCw size={14} className="absolute -bottom-1 -right-1" />
+                                        </div>
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </div>

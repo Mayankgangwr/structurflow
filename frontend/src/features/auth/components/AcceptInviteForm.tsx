@@ -1,21 +1,30 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { useAcceptInvite } from "../hooks/useAcceptInvite";
 import { Loader2, LogIn, Network } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import clsx from "clsx";
 import { PasswordInput } from "@/components/ui/PasswordInput";
-import Link from "next/link"; import { Button } from "@/components/ui/button";
-import { useAcceptInvite } from "../hooks/useAcceptInvite";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useGetInviteInfoQuery } from "../authApi";
 
 export const AcceptInviteForm: React.FC = () => {
     const searchParams = useSearchParams();
     const token = searchParams.get("token") || "";
+
+    const {
+        data: inviteInfoRes,
+        isLoading: isCheckingInvite,
+    } = useGetInviteInfoQuery(token, { skip: !token });
+
+    const inviteInfo = inviteInfoRes?.data;
+
     const {
         form,
-        control,
         isLoading,
         isValid,
         isDirty,
@@ -24,7 +33,7 @@ export const AcceptInviteForm: React.FC = () => {
         handleAcceptInvite
     } = useAcceptInvite();
 
-    const { register, formState: { errors }, reset, watch, setValue } = form;
+    const { register, formState: { errors }, reset } = form;
 
     // Warn before leaving if form is dirty
     useEffect(() => {
@@ -70,103 +79,128 @@ export const AcceptInviteForm: React.FC = () => {
                     <Network className="w-8 h-8" />
                 </div>
                 <h1 className="text-[24px] leading-7.5 font-bold tracking-[-0.01em] md:text-[30px] md:leading-9 md:tracking-[-0.02em] text-on-background">
-                    Create Account
+                    Accept Invitation
                 </h1>
-                <p className="text-on-surface-variant text-[15px] leading-5 mt-sm">Join SocialCore today to connect with friends, share your moments, and discover new communities.</p>
+                <p className="text-on-surface-variant text-[15px] leading-5 mt-sm">
+                    {inviteInfo?.organizationName
+                        ? `Join ${inviteInfo.organizationName} on StructurFlow to collaborate on document processing.`
+                        : "Join StructurFlow today to collaborate on document processing and workflows."}
+                </p>
             </div>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="w-full flex flex-col gap-4 text-left">
-                {apiError && <p className="text-sm text-red-500 text-center font-medium animate-in fade-in">{apiError}</p>}
 
-                <div className="flex flex-col gap-4">
-                    <div className="w-full space-y-1">
-                        <Label htmlFor="firstName" className="text-zinc-600 dark:text-zinc-300 ml-1">First Name</Label>
-                        <Input
-                            id="firstName"
-                            type="text"
-                            placeholder="John"
-                            className={clsx("h-11 md:h-10 px-3 text-[13px] leading-[16px] bg-white/50 focus:bg-white transition-colors border-white/40 shadow-sm rounded", errors.firstName && "border-red-500 focus-visible:ring-red-500")}
-                            {...register("firstName")}
-                        />
-                        {errors.firstName && <p className="text-xs text-red-500 mt-1 ml-1">{errors.firstName.message}</p>}
-                    </div>
-                    <div className="w-full space-y-1">
-                        <Label htmlFor="lastName" className="text-zinc-600 dark:text-zinc-300 ml-1">Last Name</Label>
-                        <Input
-                            id="lastName"
-                            type="text"
-                            placeholder="Doe"
-                            className={clsx("h-11 md:h-10 px-3 text-[13px] leading-[16px] bg-white/50 focus:bg-white transition-colors border-white/40 shadow-sm rounded", errors.lastName && "border-red-500 focus-visible:ring-red-500")}
-                            {...register("lastName")}
-                        />
-                        {errors.lastName && <p className="text-xs text-red-500 mt-1 ml-1">{errors.lastName.message}</p>}
-                    </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="password" className="text-zinc-600 dark:text-zinc-300 ml-1">Password</Label>
-                        <PasswordInput
-                            id="password"
-                            placeholder="••••••••"
-                            className={clsx("h-11 md:h-10 px-3 text-[13px] leading-[16px] bg-white/50 focus:bg-white transition-colors border-white/40 shadow-sm rounded", errors.password && "border-red-500 focus-visible:ring-red-500")}
-                            {...register("password")}
-                        />
-                        {/* Password Strength Meter */}
-                        {passwordValue && (
-                            <div className="w-full flex items-center gap-2 mt-2 px-1 animate-in fade-in">
-                                <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden flex gap-1">
-                                    <div className={clsx("h-full w-1/3 transition-all duration-300", strength >= 1 ? getStrengthColor() : "bg-transparent")} />
-                                    <div className={clsx("h-full w-1/3 transition-all duration-300", strength >= 2 ? getStrengthColor() : "bg-transparent")} />
-                                    <div className={clsx("h-full w-1/3 transition-all duration-300", strength >= 3 ? getStrengthColor() : "bg-transparent")} />
-                                </div>
-                                <span className={clsx("text-xs font-medium w-12 text-right transition-colors",
-                                    strength === 1 ? "text-red-500" :
-                                        strength === 2 ? "text-yellow-600 dark:text-yellow-500" :
-                                            strength === 3 ? "text-green-500" : "text-muted-foreground"
-                                )}>
-                                    {getStrengthText()}
-                                </span>
-                            </div>
-                        )}
-                        {errors.password && <p className="text-xs text-red-500 mt-1 ml-1">{errors.password.message}</p>}
-                    </div>
-
-                    <div className="space-y-1">
-                        <Label htmlFor="confirmPassword" className="text-zinc-600 dark:text-zinc-300 ml-1">Confirm Password</Label>
-                        <PasswordInput
-                            id="confirmPassword"
-                            placeholder="••••••••"
-                            className={clsx("h-11 md:h-10 px-3 text-[13px] leading-[16px] bg-white/50 focus:bg-white transition-colors border-white/40 shadow-sm rounded", errors.confirmPassword && "border-red-500 focus-visible:ring-red-500")}
-                            {...register("confirmPassword")}
-                        />
-                        {errors.confirmPassword && <p className="text-xs text-red-500 mt-1 ml-1">{errors.confirmPassword.message}</p>}
-                    </div>
-                </div>
-
-                <div className="flex gap-3 w-full mt-2">
+            {inviteInfo?.isRegistered ? (
+                <div className="flex flex-col gap-4 text-center">
+                    <p className="text-sm text-on-surface-variant">
+                        You have an existing account for <span className="font-semibold text-on-background">{inviteInfo.email}</span>. Click below to accept the invitation and join <span className="font-semibold text-on-background">{inviteInfo.organizationName}</span> as a <span className="font-semibold text-primary">{inviteInfo.role || "MEMBER"}</span>.
+                    </p>
+                    {apiError && <p className="text-sm text-red-500 text-center font-medium animate-in fade-in">{apiError}</p>}
                     <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => reset()}
-                        disabled={!isDirty || isLoading}
-                        className="w-1/3 h-11 md:h-10 text-[13px] leading-[16px] font-semibold shadow-sm transition-all rounded"
-                    >
-                        Reset
-                    </Button>
-                    <Button
-                        disabled={!isValid || !isDirty || isLoading}
-                        type="submit"
-                        variant="default"
-                        className={clsx(
-                            "w-2/3 h-11 md:h-10 text-[13px] leading-[16px] font-semibold shadow-md transition-all text-white rounded flex items-center justify-center gap-2",
-                            (isValid && isDirty) ? "bg-[#1877F2] hover:opacity-90 hover:shadow-lg" : "bg-[#1877F2] opacity-50 cursor-not-allowed"
-                        )}
+                        disabled={isLoading}
+                        onClick={() => handleAcceptInvite(token)}
+                        className="w-full h-11 md:h-10 text-[13px] leading-[16px] font-semibold shadow-md transition-all text-white rounded flex items-center justify-center gap-2 bg-[#1877F2] hover:opacity-90 cursor-pointer"
                     >
                         {isLoading ? (
-                            <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Creating...</>
+                            <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Joining...</>
                         ) : (
-                            <><LogIn className="mr-2 h-5 w-5" /> Create Account</>
+                            <><LogIn className="mr-2 h-5 w-5" /> Accept Invitation & Join</>
                         )}
                     </Button>
                 </div>
-            </form>
+            ) : (
+                <form onSubmit={form.handleSubmit(onSubmit)} className="w-full flex flex-col gap-4 text-left">
+                    {apiError && <p className="text-sm text-red-500 text-center font-medium animate-in fade-in">{apiError}</p>}
+
+                    <div className="flex flex-col gap-4">
+                        <div className="w-full space-y-1">
+                            <Label htmlFor="firstName" className="text-zinc-600 dark:text-zinc-300 ml-1">First Name</Label>
+                            <Input
+                                id="firstName"
+                                type="text"
+                                placeholder="John"
+                                className={clsx("h-11 md:h-10 px-3 text-[13px] leading-[16px] bg-white/50 focus:bg-white transition-colors border-white/40 shadow-sm rounded", errors.firstName && "border-red-500 focus-visible:ring-red-500")}
+                                {...register("firstName")}
+                            />
+                            {errors.firstName && <p className="text-xs text-red-500 mt-1 ml-1">{errors.firstName.message}</p>}
+                        </div>
+                        <div className="w-full space-y-1">
+                            <Label htmlFor="lastName" className="text-zinc-600 dark:text-zinc-300 ml-1">Last Name</Label>
+                            <Input
+                                id="lastName"
+                                type="text"
+                                placeholder="Doe"
+                                className={clsx("h-11 md:h-10 px-3 text-[13px] leading-[16px] bg-white/50 focus:bg-white transition-colors border-white/40 shadow-sm rounded", errors.lastName && "border-red-500 focus-visible:ring-red-500")}
+                                {...register("lastName")}
+                            />
+                            {errors.lastName && <p className="text-xs text-red-500 mt-1 ml-1">{errors.lastName.message}</p>}
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="password" className="text-zinc-600 dark:text-zinc-300 ml-1">Password</Label>
+                            <PasswordInput
+                                id="password"
+                                placeholder="••••••••"
+                                className={clsx("h-11 md:h-10 px-3 text-[13px] leading-[16px] bg-white/50 focus:bg-white transition-colors border-white/40 shadow-sm rounded", errors.password && "border-red-500 focus-visible:ring-red-500")}
+                                {...register("password")}
+                            />
+                            {/* Password Strength Meter */}
+                            {passwordValue && (
+                                <div className="w-full flex items-center gap-2 mt-2 px-1 animate-in fade-in">
+                                    <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden flex gap-1">
+                                        <div className={clsx("h-full w-1/3 transition-all duration-300", strength >= 1 ? getStrengthColor() : "bg-transparent")} />
+                                        <div className={clsx("h-full w-1/3 transition-all duration-300", strength >= 2 ? getStrengthColor() : "bg-transparent")} />
+                                        <div className={clsx("h-full w-1/3 transition-all duration-300", strength >= 3 ? getStrengthColor() : "bg-transparent")} />
+                                    </div>
+                                    <span className={clsx("text-xs font-medium w-12 text-right transition-colors",
+                                        strength === 1 ? "text-red-500" :
+                                            strength === 2 ? "text-yellow-600 dark:text-yellow-500" :
+                                                strength === 3 ? "text-green-500" : "text-muted-foreground"
+                                    )}>
+                                        {getStrengthText()}
+                                    </span>
+                                </div>
+                            )}
+                            {errors.password && <p className="text-xs text-red-500 mt-1 ml-1">{errors.password.message}</p>}
+                        </div>
+
+                        <div className="space-y-1">
+                            <Label htmlFor="confirmPassword" className="text-zinc-600 dark:text-zinc-300 ml-1">Confirm Password</Label>
+                            <PasswordInput
+                                id="confirmPassword"
+                                placeholder="••••••••"
+                                className={clsx("h-11 md:h-10 px-3 text-[13px] leading-[16px] bg-white/50 focus:bg-white transition-colors border-white/40 shadow-sm rounded", errors.confirmPassword && "border-red-500 focus-visible:ring-red-500")}
+                                {...register("confirmPassword")}
+                            />
+                            {errors.confirmPassword && <p className="text-xs text-red-500 mt-1 ml-1">{errors.confirmPassword.message}</p>}
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 w-full mt-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => reset()}
+                            disabled={!isDirty || isLoading}
+                            className="w-1/3 h-11 md:h-10 text-[13px] leading-[16px] font-semibold shadow-sm transition-all rounded"
+                        >
+                            Reset
+                        </Button>
+                        <Button
+                            disabled={!isValid || !isDirty || isLoading}
+                            type="submit"
+                            variant="default"
+                            className={clsx(
+                                "w-2/3 h-11 md:h-10 text-[13px] leading-[16px] font-semibold shadow-md transition-all text-white rounded flex items-center justify-center gap-2",
+                                (isValid && isDirty) ? "bg-[#1877F2] hover:opacity-90 hover:shadow-lg" : "bg-[#1877F2] opacity-50 cursor-not-allowed"
+                            )}
+                        >
+                            {isLoading ? (
+                                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Creating...</>
+                            ) : (
+                                <><LogIn className="mr-2 h-5 w-5" /> Create Account</>
+                            )}
+                        </Button>
+                    </div>
+                </form>
+            )}
 
             <p className="text-sm text-muted-foreground mt-4 text-center">
                 Already have an account?{" "}
@@ -175,5 +209,7 @@ export const AcceptInviteForm: React.FC = () => {
                 </Link>
             </p>
         </>
-    )
-}
+    );
+};
+
+export default AcceptInviteForm;

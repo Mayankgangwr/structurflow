@@ -26,21 +26,26 @@ export const useAcceptInvite = () => {
 
     const { isValid, isDirty, isSubmitting } = form.formState;
 
-    const handleAcceptInvite = async (token: string, data: AcceptInviteFormData) => {
+    const handleAcceptInvite = async (token: string, data?: Partial<AcceptInviteFormData>) => {
         try {
+            setApiError("");
             await acceptInvite({
                 token,
-                password: data.password,
+                firstName: data?.firstName,
+                lastName: data?.lastName,
+                password: data?.password,
             }).unwrap();
             router.push("/dashboard");
-        } catch (error) {
-            if (error instanceof Error) {
+        } catch (error: any) {
+            if (error?.data?.message) {
+                setApiError(error.data.message);
+            } else if (error instanceof Error) {
                 setApiError(error.message);
             } else {
                 setApiError("An unknown error occurred");
             }
         }
-    }
+    };
 
     return {
         form,

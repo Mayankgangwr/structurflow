@@ -16,14 +16,34 @@ class MembershipRepository extends BaseRepository<IMembership> {
   }
 
   async findAllByOrg(orgId: string) {
-    return await this.model.find({ organizationId: orgId }).populate('user', '-passwordHash');
+    return await this.model
+      .find({ organizationId: orgId })
+      .populate('userId', 'firstName lastName email avatar createdAt lastLoginAt')
+      .sort({ createdAt: 1 })
+      .lean();
   }
 
   async findByOrgAndUser(organizationId: string, userId: string) {
     return await this.model.findOne({ organizationId, userId })
       .populate('organizationId')
-      .populate('userId')
+      .populate('userId', 'firstName lastName email avatar')
       .lean();
+  }
+
+  async updateRole(organizationId: string, userId: string, role: Role) {
+    return await this.model.findOneAndUpdate(
+      { organizationId, userId },
+      { role },
+      { new: true }
+    ).populate('userId', 'firstName lastName email avatar').lean();
+  }
+
+  async deleteByOrgAndUser(organizationId: string, userId: string) {
+    return await this.model.findOneAndDelete({ organizationId, userId }).exec();
+  }
+
+  async countByOrgAndRole(organizationId: string, role: Role): Promise<number> {
+    return await this.model.countDocuments({ organizationId, role });
   }
 }
 

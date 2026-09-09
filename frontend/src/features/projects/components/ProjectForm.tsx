@@ -9,6 +9,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCreateProjectMutation, useUpdateProjectMutation, Project } from "../projectApi";
 import { useSelector } from "react-redux";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 const projectSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters"),
@@ -25,11 +26,17 @@ export interface ProjectFormProps {
 
 const ProjectForm: React.FC<ProjectFormProps> = ({ isOpen, onClose, project }) => {
     const orgId = useSelector((state: any) => state.auth.activeOrganizationId);
+    const { can } = usePermissions();
 
     const [createProject, { isLoading: isCreating }] = useCreateProjectMutation();
     const [updateProject, { isLoading: isUpdating }] = useUpdateProjectMutation();
 
     const isEditMode = !!project;
+
+    // Permissions guard: Ensure user has permission to create or edit
+    if (!isOpen) return null;
+    if (isEditMode && !can("edit_project")) return null;
+    if (!isEditMode && !can("create_project")) return null;
 
     const {
         register,

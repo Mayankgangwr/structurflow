@@ -100,8 +100,21 @@ export const authApi = baseApi.injectEndpoints({
             }),
         }),
 
+        // Get Invite Info API
+        getInviteInfo: builder.query<{
+            success: boolean;
+            data: {
+                email: string;
+                isRegistered: boolean;
+                organizationName: string;
+                role?: string;
+            };
+        }, string>({
+            query: (token) => `/auth/invite-info/${token}`,
+        }),
+
         // Accept Invite API
-        acceptInvite: builder.mutation<AuthResponse, any>({
+        acceptInvite: builder.mutation<AuthResponse, { token: string; firstName?: string; lastName?: string; password?: string }>({
             query: (credentials) => ({
                 url: '/auth/accept-invite',
                 method: 'POST',
@@ -114,5 +127,6 @@ export const authApi = baseApi.injectEndpoints({
 export const {
     useLoginMutation, useRegisterMutation, useLogoutMutation,
     useGetMeQuery, useVerifyOTPMutation, useResendOTPMutation,
-    useForgotPasswordMutation, useResetPasswordMutation, useAcceptInviteMutation
+    useForgotPasswordMutation, useResetPasswordMutation, useAcceptInviteMutation,
+    useGetInviteInfoQuery
 } = authApi;

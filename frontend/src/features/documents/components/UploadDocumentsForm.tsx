@@ -6,6 +6,8 @@ import { Loader2, Upload, FileIcon, FileText, Image as ImageIcon, CheckCircle, T
 import { formatSize } from "@/lib/utils";
 import Link from "next/link";
 
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
+
 export interface IUploadDocumentsFormProps {
     projectId?: string;
     projects?: { id: string; name: string }[];
@@ -14,6 +16,7 @@ export interface IUploadDocumentsFormProps {
 }
 
 const UploadDocumentsForm: React.FC<IUploadDocumentsFormProps> = ({ projectId, projects, isOpen, onClose }) => {
+    const { can } = usePermissions();
     const [selectedProjectId, setSelectedProjectId] = useState<string>(projectId || (projects?.[0]?.id ?? ""));
     const { uploadFiles, isLoading, isError, error } = useUploadDocument(selectedProjectId);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -37,7 +40,7 @@ const UploadDocumentsForm: React.FC<IUploadDocumentsFormProps> = ({ projectId, p
         }
     }, [isOpen]);
 
-    if (!isOpen) return null;
+    if (!isOpen || !can("upload_documents")) return null;
 
     const handleFilesAdded = (files: FileList | File[]) => {
         const fileArray = Array.from(files);

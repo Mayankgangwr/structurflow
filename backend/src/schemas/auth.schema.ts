@@ -47,6 +47,14 @@ export const resetPasswordSchema = z.object({
     })
 });
 
+export const acceptInviteSchema = z.object({
+    body: z.object({
+        token: z.string().min(1, 'Token is required'),
+        password: z.string().min(8, 'Password must be at least 8 characters').optional(),
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+    })
+});
 
 export type LoginFormData = z.infer<typeof loginSchema.shape.body>;
 export type RegisterFormData = z.infer<typeof registerSchema.shape.body>;
@@ -54,4 +62,5 @@ export type VerifyOtpFormData = z.infer<typeof verifyOtpSchema.shape.body>;
 export type ResendOtpFormData = z.infer<typeof resendOtpSchema.shape.body>;
 export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema.shape.body>;
 export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema.shape.body>;
+export type AcceptInviteFormData = z.infer<typeof acceptInviteSchema.shape.body>;
 

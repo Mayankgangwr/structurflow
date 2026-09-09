@@ -1,6 +1,7 @@
 import organizationRepository from "@/repositories/organization.repository";
 import userRepository from "@/repositories/user.repository";
 import membershipRepository from "@/repositories/membership.repository";
+import invitationRepository from "@/repositories/invitation.repository";
 import { RegisterFormData } from "@/schemas/auth.schema";
 import { ApiErrors } from "@/utils/errors";
 import bcrypt from "bcrypt";
@@ -160,23 +161,52 @@ class AuthService {
     }
 
     async getInviteInfo(token: string) {
-        const inviteData = await redis.getJson(`org_invite:${token}`) as { email: string; organizationId: string; role: Role };
-        if (!inviteData) throw ApiErrors.invalidOrExpiredInvite();
+        let inviteData = await redis.getJson(`org_invite:${token}`) as { email: string; organizationId: string; role: Role };
+        let orgName = 'an organization';
+        let role = 'MEMBER';
 
-        const { email, organizationId } = inviteData;
-        const user = await userRepository.findByEmail(email);
-        const org = await organizationRepository.findById(organizationId);
+        if (inviteData) {
+            role = inviteData.role;
+            const org = await organizationRepository.findById(inviteData.organizationId);
+            if (org) orgName = org.name;
+        } else {
+            // Fallback to MongoDB invitation
+            const dbInvite = await invitationRepository.findByToken(token);
+            if (!dbInvite || dbInvite.status !== "PENDING" || dbInvite.expiresAt < new Date()) {
+                throw ApiErrors.invalidOrExpiredInvite();
+            }
+            inviteData = {
+                email: dbInvite.email,
+                organizationId: (dbInvite.organizationId as any)?._id ? (dbInvite.organizationId as any)._id.toString() : dbInvite.organizationId.toString(),
+                role: dbInvite.role as Role,
+            };
+            role = dbInvite.role;
+            orgName = (dbInvite.organizationId as any)?.name || 'an organization';
+        }
+
+        const user = await userRepository.findByEmail(inviteData.email);
 
         return {
-            email,
+            email: inviteData.email,
             isRegistered: !!user,
-            organizationName: org?.name || 'an organization'
+            organizationName: orgName,
+            role,
         };
     }
 
     async acceptInvite(token: string, payload: { firstName?: string, lastName?: string, password?: string }) {
-        const inviteData = await redis.getJson(`org_invite:${token}`) as { email: string; organizationId: string; role: Role };
-        if (!inviteData) throw ApiErrors.invalidOrExpiredInvite();
+        let inviteData = await redis.getJson(`org_invite:${token}`) as { email: string; organizationId: string; role: Role };
+        if (!inviteData) {
+            const dbInvite = await invitationRepository.findByToken(token);
+            if (!dbInvite || dbInvite.status !== "PENDING" || dbInvite.expiresAt < new Date()) {
+                throw ApiErrors.invalidOrExpiredInvite();
+            }
+            inviteData = {
+                email: dbInvite.email,
+                organizationId: (dbInvite.organizationId as any)?._id ? (dbInvite.organizationId as any)._id.toString() : dbInvite.organizationId.toString(),
+                role: dbInvite.role as Role,
+            };
+        }
 
         const { email, organizationId, role } = inviteData;
         let user: any = await userRepository.findByEmail(email);
@@ -209,6 +239,7 @@ class AuthService {
             });
 
             await redis.del(`org_invite:${token}`);
+            await invitationRepository.markAccepted(token);
 
             const memberships = await membershipRepository.findAllByUser(user._id.toString());
             return this.generateAuthResponse(user, memberships);

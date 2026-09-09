@@ -12,6 +12,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 export interface ProjectCardProps {
     project: Project;
@@ -21,6 +22,7 @@ export interface ProjectCardProps {
 
 const ProjectCard: React.FC<ProjectCardProps> = ({ project, onEdit, onDelete }) => {
     const router = useRouter();
+    const { can } = usePermissions();
 
     const handleOpenProject = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -79,38 +81,44 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onEdit, onDelete }) 
                         </div>
                     </div>
 
-                    {/* More Options Menu */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger
-                            className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-md transition-colors shrink-0 cursor-pointer"
-                            onClick={(e) => e.stopPropagation()}
-                            title="More options"
-                        >
-                            <MoreVertical className="w-4 h-4 block" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40 bg-white border border-slate-200">
-                            <DropdownMenuItem
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onEdit(project);
-                                }}
-                                className="cursor-pointer"
+                    {/* More Options Menu (gated for OWNER / ADMIN) */}
+                    {(can("edit_project") || can("delete_project")) && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger
+                                className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1.5 rounded-md transition-colors shrink-0 cursor-pointer"
+                                onClick={(e) => e.stopPropagation()}
+                                title="More options"
                             >
-                                <Edit2 className="w-4 h-4 mr-2" />
-                                <span>Edit Project</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDelete(project.id);
-                                }}
-                                className="cursor-pointer text-rose-600 focus:text-rose-600"
-                            >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                <span>Delete Project</span>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                                <MoreVertical className="w-4 h-4 block" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40 bg-white border border-slate-200">
+                                {can("edit_project") && (
+                                    <DropdownMenuItem
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onEdit(project);
+                                        }}
+                                        className="cursor-pointer"
+                                    >
+                                        <Edit2 className="w-4 h-4 mr-2" />
+                                        <span>Edit Project</span>
+                                    </DropdownMenuItem>
+                                )}
+                                {can("delete_project") && (
+                                    <DropdownMenuItem
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onDelete(project.id);
+                                        }}
+                                        className="cursor-pointer text-rose-600 focus:text-rose-600"
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        <span>Delete Project</span>
+                                    </DropdownMenuItem>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
                 </div>
 
                 {/* Description */}
@@ -182,29 +190,38 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onEdit, onDelete }) 
                     <span>Open Project</span>
                     <ArrowRight className="w-4 h-4" />
                 </Button>
-                <div className="flex items-center gap-1">
-                    <Button
-                        variant="outline"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit(project);
-
-                        }}
-                        className="text-primary/70 hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
-                        size={"icon-sm"}>
-                        <Edit2 className="h-5 w-5" />
-                    </Button>
-                    <Button
-                        variant="outline"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete(project.id);
-                        }}
-                        className="text-error hover:text-error transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
-                        size={"icon-sm"}>
-                        <Trash2 className="h-5 w-5 text-error/70 hover:text-error" />
-                    </Button>
-                </div>
+                {(can("edit_project") || can("delete_project")) && (
+                    <div className="flex items-center gap-1">
+                        {can("edit_project") && (
+                            <Button
+                                variant="outline"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEdit(project);
+                                }}
+                                className="text-primary/70 hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
+                                size={"icon-sm"}
+                                title="Edit Project"
+                            >
+                                <Edit2 className="h-5 w-5" />
+                            </Button>
+                        )}
+                        {can("delete_project") && (
+                            <Button
+                                variant="outline"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDelete(project.id);
+                                }}
+                                className="text-error hover:text-error transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
+                                size={"icon-sm"}
+                                title="Delete Project"
+                            >
+                                <Trash2 className="h-5 w-5 text-error/70 hover:text-error" />
+                            </Button>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

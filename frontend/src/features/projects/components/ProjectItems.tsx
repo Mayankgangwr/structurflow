@@ -20,6 +20,7 @@ import { RootState } from "@/store";
 import { Project, useDeleteProjectMutation, useGetProjectsQuery } from "../projectApi";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 export interface IProjectItems {
     projects?: Project[];
@@ -27,6 +28,7 @@ export interface IProjectItems {
 
 const ProjectItems: React.FC<IProjectItems> = () => {
     const router = useRouter();
+    const { can } = usePermissions();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [searchQuery, setSearchQuery] = useState("");
@@ -183,36 +185,46 @@ const ProjectItems: React.FC<IProjectItems> = () => {
                 </span>
             ),
         },
-        {
-            id: "actions",
-            header: "Actions",
-            headerClassName: "text-right",
-            className: "text-right",
-            cell: (project) => (
-                <div className="flex items-center justify-end gap-2 px">
-                    <Button
-                        variant="outline"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenDeleteDialog(project.id);
-                        }}
-                        className="text-error hover:text-error transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
-                        size={"icon-sm"}>
-                        <Trash2 className="h-5 w-5 text-error/70 hover:text-error" />
-                    </Button>
-                    <Button
-                        variant="outline"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(project);
-                        }}
-                        className="text-primary/70 hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
-                        size={"icon-sm"}>
-                        <Edit2 className="h-5 w-5" />
-                    </Button>
-                </div >
-            ),
-        },
+        ...(can("edit_project") || can("delete_project")
+            ? [
+                  {
+                      id: "actions",
+                      header: "Actions",
+                      headerClassName: "text-right",
+                      className: "text-right",
+                      cell: (project: Project) => (
+                          <div className="flex items-center justify-end gap-2 px">
+                              {can("delete_project") && (
+                                  <Button
+                                      variant="outline"
+                                      onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenDeleteDialog(project.id);
+                                      }}
+                                      className="text-error hover:text-error transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
+                                      size={"icon-sm"}
+                                  >
+                                      <Trash2 className="h-5 w-5 text-error/70 hover:text-error" />
+                                  </Button>
+                              )}
+                              {can("edit_project") && (
+                                  <Button
+                                      variant="outline"
+                                      onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEdit(project);
+                                      }}
+                                      className="text-primary/70 hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
+                                      size={"icon-sm"}
+                                  >
+                                      <Edit2 className="h-5 w-5" />
+                                  </Button>
+                              )}
+                          </div>
+                      ),
+                  } as DataTableColumn<Project>,
+              ]
+            : []),
     ];
 
     if (isLoading) {

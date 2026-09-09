@@ -33,6 +33,7 @@ import { Dialog } from "@/components/ui/dialog";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 export interface IPreviewDocument {
     data: Document | null;
@@ -40,6 +41,7 @@ export interface IPreviewDocument {
 }
 
 const DocumentsWorkspace: React.FC = () => {
+    const { can } = usePermissions();
     const searchParams = useSearchParams();
     const urlStatus = searchParams?.get("status") || "ALL";
     const urlProjectId = searchParams?.get("projectId") || "ALL";
@@ -287,7 +289,7 @@ const DocumentsWorkspace: React.FC = () => {
                         <Eye className="h-4 w-4 text-primary/70 hover:text-primary" />
                     </Button>
 
-                    {doc.status === "UPLOADED" ? (
+                    {doc.status === "UPLOADED" && can("verify_documents") ? (
                         <Button
                             variant="outline"
                             title="Transform Document"
@@ -304,7 +306,7 @@ const DocumentsWorkspace: React.FC = () => {
                     ) : ["TRANSFORMED", "VERIFIED", "EXPORTED"].includes(doc.status) ? (
                         <Button
                             variant="outline"
-                            title={doc.status === "VERIFIED" ? "Export Document" : "Verify Document"}
+                            title={doc.status === "VERIFIED" ? "Export Document" : doc.status === "EXPORTED" ? "Download" : "Verify Document"}
                             className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
                             size="icon-sm"
                             onClick={() => setPreviewTransformedDocument({ id: doc._id, isOpen: true })}
@@ -317,15 +319,17 @@ const DocumentsWorkspace: React.FC = () => {
                         </Button>
                     ) : null}
 
-                    <Button
-                        variant="outline"
-                        onClick={() => handleDelete(doc._id)}
-                        className="text-error hover:text-error transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
-                        size="icon-sm"
-                        title="Delete Document"
-                    >
-                        <Trash2 className="h-4 w-4 text-error/70 hover:text-error" />
-                    </Button>
+                    {can("delete_documents") && (
+                        <Button
+                            variant="outline"
+                            onClick={() => handleDelete(doc._id)}
+                            className="text-error hover:text-error transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
+                            size="icon-sm"
+                            title="Delete Document"
+                        >
+                            <Trash2 className="h-4 w-4 text-error/70 hover:text-error" />
+                        </Button>
+                    )}
                 </div>
             ),
         },
@@ -351,12 +355,14 @@ const DocumentsWorkspace: React.FC = () => {
                     </p>
                 </div>
 
-                <Button
-                    onClick={() => setIsUploadFormOpen(true)}
-                    className="bg-primary text-white! hover:text-white! font-label-md hover:bg-primary-container transition-colors shrink-0 py-2 px-4 text-label-md cursor-pointer self-start sm:self-auto"
-                >
-                    <Upload className="w-4 h-4 mr-1.5" /> Add Documents
-                </Button>
+                {can("upload_documents") && (
+                    <Button
+                        onClick={() => setIsUploadFormOpen(true)}
+                        className="bg-primary text-white! hover:text-white! font-label-md hover:bg-primary-container transition-colors shrink-0 py-2 px-4 text-label-md cursor-pointer self-start sm:self-auto"
+                    >
+                        <Upload className="w-4 h-4 mr-1.5" /> Add Documents
+                    </Button>
+                )}
             </div>
 
             {/* Top KPI Metric Cards */}

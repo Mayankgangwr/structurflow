@@ -8,7 +8,8 @@ import {
     verifyOtpSchema, 
     resendOtpSchema, 
     forgotPasswordSchema, 
-    resetPasswordSchema 
+    resetPasswordSchema,
+    acceptInviteSchema
 } from '@/schemas/auth.schema';
 
 const authRouter = Router();
@@ -26,6 +27,6 @@ authRouter.post('/forgot-password', validateRequest(forgotPasswordSchema), authC
 authRouter.post('/reset-password', validateRequest(resetPasswordSchema), authController.resetPassword);
 
 authRouter.get('/invite-info/:token', authController.getInviteInfo);
-authRouter.post('/accept-invite', authController.acceptInvite);
+authRouter.post('/accept-invite', validateRequest(acceptInviteSchema), authController.acceptInvite);
 
 export default authRouter;

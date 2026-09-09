@@ -7,11 +7,13 @@ import { usePathname } from "next/navigation";
 import { getPageDetails } from "@/lib/utils";
 import { Button } from "../ui/button";
 import ProjectForm from "@/features/projects/components/ProjectForm";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 const Topbar: React.FC = () => {
     const pathname = usePathname() || "";
     const { title, description } = getPageDetails(pathname);
     const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
+    const { can } = usePermissions();
 
     return (
         <>
@@ -29,14 +31,16 @@ const Topbar: React.FC = () => {
                     <button className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:bg-surface-container-low transition-colors">
                         <Bell className="w-5 h-5" />
                     </button>
+                    {can("create_project") && (
+                        <Button
+                            className={`bg-primary text-white! hover:text-white! mb-0 font-label-md hover:bg-primary-container transition-colors shrink-0 rounded-md py-2 px-4 text-label-md`}
+                            title={"New Project"}
+                            onClick={() => setIsProjectFormOpen(true)}
+                        >
+                            {"New Project"}
+                        </Button>
+                    )}
 
-                    <Button
-                        className={`bg-primary !text-white hover:!text-white mb-0 font-label-md hover:bg-primary-container transition-colors shrink-0 rounded-md py-2 px-4 text-label-md`}
-                        title={"New Project"}
-                        onClick={() => setIsProjectFormOpen(true)}
-                    >
-                        {"New Project"}
-                    </Button>
                 </div>
             </header>
             <ProjectForm isOpen={isProjectFormOpen} onClose={() => setIsProjectFormOpen(false)} />

@@ -2,15 +2,31 @@ import React, { useRef, useState } from "react";
 import { Braces, Files, FileText, Sheet, Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUploadTemplate } from "@/features/templates/hooks/useUploadTemplate";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 export interface IUploadTemplateProps {
     projectId: string;
 }
 
 const UploadTemplate: React.FC<IUploadTemplateProps> = ({ projectId }) => {
+    const { can } = usePermissions();
     const { uploadFile, isLoading, isError, error } = useUploadTemplate(projectId);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isDragging, setIsDragging] = useState(false);
+
+    if (!can("manage_templates")) {
+        return (
+            <div className="bg-surface rounded-xl border border-border-subtle overflow-hidden relative p-8 flex-1 flex flex-col items-center justify-center text-center min-h-[320px]">
+                <div className="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center text-secondary mb-4">
+                    <FileText className="w-8 h-8 text-secondary" />
+                </div>
+                <h3 className="font-headline-md text-headline-md text-text-primary mb-2">No Active Template</h3>
+                <p className="font-body-sm text-body-sm text-secondary max-w-md">
+                    This project has not yet been configured with an extraction template. An Admin or Owner must upload a template before documents can be transformed.
+                </p>
+            </div>
+        );
+    }
 
     const handleFile = async (file: File) => {
         try {

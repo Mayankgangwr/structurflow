@@ -12,6 +12,7 @@ import DocumentToolbar from "@/features/documents/components/DocumentToolbar";
 import DocumentCard from "@/features/documents/components/DocumentCard";
 import { Dialog } from "@/components/ui/dialog";
 import toast from "react-hot-toast";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 export interface IDocumentViewProps {
     projectId: string;
@@ -23,6 +24,7 @@ export interface IPreviewDocument {
 }
 
 const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
+    const { can } = usePermissions();
     const [isUploadFormOpen, setIsUploadFormOpen] = useState<boolean>(false);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
@@ -216,16 +218,18 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
                     <Button
                         variant="outline"
                         onClick={() => setPreviewDocument({ data: document, isOpen: true })}
-                        className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
-                        size={"icon-sm"}>
+                        className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container cursor-pointer"
+                        size={"icon-sm"}
+                        title="View Document"
+                    >
                         <Eye className="h-5 w-5 text-primary/70 hover:text-primary" />
                     </Button>
 
-                    {document.status === 'UPLOADED' ? (
+                    {document.status === 'UPLOADED' && can("verify_documents") && (
                         <Button
                             variant="outline"
                             title="Transform Document"
-                            className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
+                            className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container cursor-pointer"
                             size={"icon-sm"}
                             onClick={() => handleProcessDocument(document._id)}
                         >
@@ -235,28 +239,37 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
                                 <Sparkles className="h-5 w-5 text-primary/70 hover:text-primary" />
                             )}
                         </Button>
-                    ) : ["TRANSFORMED", "VERIFIED", "EXPORTED"].includes(document.status) ? (
+                    )}
+
+                    {["TRANSFORMED", "VERIFIED", "EXPORTED"].includes(document.status) && (
+                        (document.status === "TRANSFORMED" && !can("verify_documents")) ? null : (
+                            <Button
+                                variant="outline"
+                                title={document.status === "VERIFIED" ? "Export Document" : document.status === "EXPORTED" ? "Download" : "Verify Document"}
+                                className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container cursor-pointer"
+                                size={"icon-sm"}
+                                onClick={() => setPreviewTransformedDocument({ id: document._id, isOpen: true })}
+                            >
+                                {document.status === "VERIFIED" || document.status === "EXPORTED" ? (
+                                    <FileDown className="h-5 w-5 text-primary/70 hover:text-primary" />
+                                ) : (
+                                    <FileCheck className="h-5 w-5 text-primary/70 hover:text-primary" />
+                                )}
+                            </Button>
+                        )
+                    )}
+
+                    {can("delete_documents") && (
                         <Button
                             variant="outline"
-                            title={document.status === "VERIFIED" ? "Export Document" : "Verify Document"}
-                            className="text-secondary hover:text-primary transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
+                            onClick={() => handleDelete(document._id)}
+                            className="text-error hover:text-error transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container cursor-pointer"
                             size={"icon-sm"}
-                            onClick={() => setPreviewTransformedDocument({ id: document._id, isOpen: true })}>
-                            {document.status === "VERIFIED" || document.status === "EXPORTED" ? (
-                                <FileDown className="h-5 w-5 text-primary/70 hover:text-primary" />
-                            ) : (
-                                <FileCheck className="h-5 w-5 text-primary/70 hover:text-primary" />
-                            )}
+                            title="Delete Document"
+                        >
+                            <Trash2 className="h-5 w-5 text-error/70 hover:text-error" />
                         </Button>
-                    ) : null}
-
-                    <Button
-                        variant="outline"
-                        onClick={() => handleDelete(document._id)}
-                        className="text-error hover:text-error  transition-colors flex items-center justify-center p-xs rounded-md hover:bg-surface-container"
-                        size={"icon-sm"}>
-                        <Trash2 className="h-5 w-5 text-error/70 hover:text-error" />
-                    </Button>
+                    )}
                 </div >
             ),
         },
@@ -267,9 +280,11 @@ const DocumentView: React.FC<IDocumentViewProps> = ({ projectId }) => {
         <div className="w-full">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="font-headline-md text-headline-md text-text-primary">Documents Workspace</h3>
-                <Button onClick={() => setIsUploadFormOpen(true)} className="bg-primary text-white! hover:text-white! font-label-md hover:bg-primary-container transition-colors shrink-0 py-2 px-4 text-label-md cursor-pointer">
-                    <Upload className="w-4 h-4 mr-1.5" /> Add Documents
-                </Button>
+                {can("upload_documents") && (
+                    <Button onClick={() => setIsUploadFormOpen(true)} className="bg-primary text-white! hover:text-white! font-label-md hover:bg-primary-container transition-colors shrink-0 py-2 px-4 text-label-md cursor-pointer">
+                        <Upload className="w-4 h-4 mr-1.5" /> Add Documents
+                    </Button>
+                )}
             </div>
 
             {/* Toolbar: Search, Filters, View Switcher */}
