@@ -178,14 +178,14 @@ export const DashboardRecentDocumentsTable: React.FC<DashboardRecentDocumentsTab
                     </div>
                 ) : viewMode === "table" ? (
                     /* TABLE VIEW */
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full text-left border-collapse table-auto">
                         <thead>
                             <tr className="border-b border-slate-100 bg-slate-50/60 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                                <th className="py-2.5 px-4">Document</th>
-                                <th className="py-2.5 px-3 hidden sm:table-cell">Project</th>
-                                <th className="py-2.5 px-3">Status</th>
-                                <th className="py-2.5 px-3 hidden md:table-cell">Ingested</th>
-                                <th className="py-2.5 px-4 text-right">Action</th>
+                                <th className="py-2.5 px-4 w-[36%] min-w-[160px]">Document</th>
+                                <th className="py-2.5 px-3 w-[18%] hidden sm:table-cell">Project</th>
+                                <th className="py-2.5 px-3 w-[18%]">Status</th>
+                                <th className="py-2.5 px-3 w-[18%] hidden md:table-cell">Ingested</th>
+                                <th className="py-2.5 px-4 w-[10%] text-right">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-xs">
@@ -213,11 +213,11 @@ export const DashboardRecentDocumentsTable: React.FC<DashboardRecentDocumentsTab
                                     >
                                         {/* Document Name + Size */}
                                         <td className="py-3 px-4">
-                                            <div className="flex items-center gap-2.5 min-w-0 max-w-[220px] sm:max-w-[280px]">
+                                            <div className="flex items-center gap-2.5 min-w-0">
                                                 <div className="p-1.5 rounded-md bg-slate-100 shrink-0">
                                                     {getFileIcon(doc.mimeType)}
                                                 </div>
-                                                <div className="truncate">
+                                                <div className="min-w-0">
                                                     <div
                                                         className="font-semibold text-slate-900 truncate group-hover:text-indigo-600 transition-colors"
                                                         title={docName}
@@ -233,19 +233,19 @@ export const DashboardRecentDocumentsTable: React.FC<DashboardRecentDocumentsTab
 
                                         {/* Project Tag */}
                                         <td className="py-3 px-3 hidden sm:table-cell">
-                                            <div className="flex items-center gap-1 text-slate-600 max-w-[140px] truncate">
+                                            <div className="flex items-center gap-1 text-slate-600 min-w-0">
                                                 <FolderKanban className="w-3 h-3 text-slate-400 shrink-0" />
                                                 <span className="truncate">{projectName}</span>
                                             </div>
                                         </td>
 
                                         {/* Status Badge */}
-                                        <td className="py-3 px-3">{getStatusBadge(doc.status)}</td>
+                                        <td className="py-3 px-3 whitespace-nowrap">{getStatusBadge(doc.status)}</td>
 
                                         {/* Timestamp */}
-                                        <td className="py-3 px-3 hidden md:table-cell text-slate-500 whitespace-nowrap">
+                                        <td className="py-3 px-3 hidden md:table-cell text-slate-500 whitespace-nowrap text-[11px]">
                                             <div className="flex items-center gap-1">
-                                                <Clock className="w-3 h-3 text-slate-400" />
+                                                <Clock className="w-3 h-3 text-slate-400 shrink-0" />
                                                 <span>{timeAgo}</span>
                                             </div>
                                         </td>

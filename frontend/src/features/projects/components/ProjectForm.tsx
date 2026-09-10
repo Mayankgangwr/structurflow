@@ -33,11 +33,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ isOpen, onClose, project }) =
 
     const isEditMode = !!project;
 
-    // Permissions guard: Ensure user has permission to create or edit
-    if (!isOpen) return null;
-    if (isEditMode && !can("edit_project")) return null;
-    if (!isEditMode && !can("create_project")) return null;
-
     const {
         register,
         handleSubmit,
@@ -81,17 +76,21 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ isOpen, onClose, project }) =
             } else {
                 await createProject({
                     name: data.name,
-                    description: data.description || "", //description is not in create payload currently in api, but we can pass it if we update API or ignore for now
+                    description: data.description || "",
                 }).unwrap();
             }
             onClose();
         } catch (error) {
             console.error("Failed to save project", error);
-            // Handle error (e.g. show toast)
         }
     };
 
     const isLoading = isCreating || isUpdating;
+
+    // Permissions & Open guard: Unconditionally placed after all React hooks
+    if (!isOpen) return null;
+    if (isEditMode && !can("edit_project")) return null;
+    if (!isEditMode && !can("create_project")) return null;
 
     return (
         <Dialog

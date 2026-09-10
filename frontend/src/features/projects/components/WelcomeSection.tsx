@@ -4,7 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
-const WelcomeSection: React.FC = () => {
+interface WelcomeSectionProps {
+    onOpenNewProject?: () => void;
+}
+
+const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onOpenNewProject }) => {
     const { can } = usePermissions();
 
     return (
@@ -15,7 +19,8 @@ const WelcomeSection: React.FC = () => {
 
             {can("create_project") && (
                 <Button
-                    className={`bg-primary !text-white hover:!text-white font-label-md hover:bg-primary-container transition-colors shrink-0`}
+                    onClick={onOpenNewProject}
+                    className={`bg-primary !text-white hover:!text-white font-label-md hover:bg-primary-container transition-colors shrink-0 cursor-pointer`}
                     title={"New Project"}
                 >
                     <div className="flex items-center gap-2">

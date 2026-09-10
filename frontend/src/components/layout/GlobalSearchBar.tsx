@@ -155,7 +155,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                     ref={inputRef}
                     autoFocus={isMobile}
                     className="w-full pl-9 pr-16 py-1.5 bg-surface rounded-md border border-border-subtle text-body-sm font-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-shadow text-xs"
-                    placeholder="Search documents, projects, navigation... (Ctrl+K)"
+                    placeholder="Search workspace..."
                     type="text"
                     value={query}
                     onFocus={() => setIsOpen(true)}

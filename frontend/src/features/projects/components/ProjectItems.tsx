@@ -251,7 +251,23 @@ const ProjectItems: React.FC<IProjectItems> = () => {
 
     // If organisation has 0 projects in total, show the empty state
     if (!isLoading && meta && meta.totalProjects === 0) {
-        return <EmptyStateSection />;
+        return (
+            <>
+                <EmptyStateSection
+                    onOpenNewProject={() => {
+                        setCurrentProject(null);
+                        setIsProjectFormOpen(true);
+                    }}
+                />
+                {isProjectFormOpen && (
+                    <ProjectForm
+                        isOpen={isProjectFormOpen}
+                        onClose={() => handleClose()}
+                        project={currentProject}
+                    />
+                )}
+            </>
+        );
     }
 
     return (
@@ -339,7 +355,7 @@ const ProjectItems: React.FC<IProjectItems> = () => {
                     onDelete={handleDelete}
                 />
             )}
-            {currentProject && isProjectFormOpen && (
+            {isProjectFormOpen && (
                 <ProjectForm
                     isOpen={isProjectFormOpen}
                     onClose={() => handleClose()}

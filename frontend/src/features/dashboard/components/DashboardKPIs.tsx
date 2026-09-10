@@ -203,8 +203,8 @@ const DashboardKPIs: React.FC<DashboardKPIsProps> = ({
                                 {totalProjects.toLocaleString()}
                             </div>
                         )}
-                        <div className="text-xs text-slate-500 font-medium truncate">
-                            Configured project workspaces
+                        <div className="text-xs text-slate-500 font-medium">
+                            Configured workspaces
                         </div>
                     </div>
                     <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600 shrink-0">

@@ -8,6 +8,7 @@ import {
     ClipboardCheck,
     FolderPlus,
     Sparkles,
+    RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,11 +16,15 @@ import { Button } from "@/components/ui/button";
 interface DashboardWelcomeHeaderProps {
     pendingVerificationCount: number;
     organizationName?: string;
+    onRefresh?: () => void;
+    isRefreshing?: boolean;
 }
 
 const DashboardWelcomeHeader: React.FC<DashboardWelcomeHeaderProps> = ({
     pendingVerificationCount,
     organizationName,
+    onRefresh,
+    isRefreshing = false,
 }) => {
     const { user, role, can, isOwner, isAdmin } = usePermissions();
 
@@ -110,6 +115,19 @@ const DashboardWelcomeHeader: React.FC<DashboardWelcomeHeaderProps> = ({
                             <span>Projects</span>
                         </Button>
                     </Link>
+                )}
+
+                {onRefresh && (
+                    <Button
+                        variant="outline"
+                        onClick={onRefresh}
+                        disabled={isRefreshing}
+                        className="bg-white/5 hover:bg-white/15 text-slate-200 border-white/10 text-xs sm:text-sm font-medium gap-1.5 py-2 px-3 cursor-pointer transition-all"
+                        title="Sync live dashboard metrics"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 text-indigo-300 ${isRefreshing ? "animate-spin" : ""}`} />
+                        <span className="hidden sm:inline">{isRefreshing ? "Syncing..." : "Sync"}</span>
+                    </Button>
                 )}
             </div>
         </div>

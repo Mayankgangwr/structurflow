@@ -51,7 +51,7 @@ const DocumentsKPIHeader: React.FC<DocumentsKPIHeaderProps> = ({
             icon: ClipboardCheck,
             color: "text-amber-600",
             bg: "bg-amber-50 border-amber-100/80",
-            statusFilter: "TRANSFORMED",
+            statusFilter: "NEEDS_VERIFICATION",
             highlight: needsVerification > 0,
         },
         {

@@ -37,6 +37,7 @@ export interface DocumentToolbarProps {
 
 const statusOptions = [
     { label: "All Statuses", value: "ALL" },
+    { label: "Needs Verification", value: "NEEDS_VERIFICATION" },
     { label: "Uploaded", value: "UPLOADED" },
     { label: "Processing", value: "PROCESSING" },
     { label: "Transformed", value: "TRANSFORMED" },

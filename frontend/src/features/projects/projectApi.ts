@@ -68,7 +68,7 @@ export const projectApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body: { name, description }
             }),
-            invalidatesTags: ['Projects']
+            invalidatesTags: ['Projects', 'Analytics']
         }),
 
         getProjectById: builder.query<{ success: boolean; data: Project }, string>({
@@ -76,7 +76,7 @@ export const projectApi = baseApi.injectEndpoints({
                 url: `/projects/${projectId}`,
                 method: 'GET',
             }),
-            providesTags: (result, error, projectId) => [{ type: 'Projects', id: projectId }],
+            providesTags: (result, error, projectId) => [{ type: 'Projects', id: projectId }, 'Projects'],
         }),
 
         updateProject: builder.mutation<{ success: boolean; data: Project }, { projectId: string; name?: string; description?: string }>(
@@ -89,7 +89,11 @@ export const projectApi = baseApi.injectEndpoints({
                         description: description,
                     }
                 }),
-                invalidatesTags: ['Projects']
+                invalidatesTags: (result, error, { projectId }) => [
+                    'Projects',
+                    { type: 'Projects', id: projectId },
+                    'Analytics'
+                ]
             }
         ),
 
@@ -99,7 +103,11 @@ export const projectApi = baseApi.injectEndpoints({
                     url: `/projects/${projectId}`,
                     method: 'DELETE',
                 }),
-                invalidatesTags: ['Projects']
+                invalidatesTags: (result, error, projectId) => [
+                    'Projects',
+                    { type: 'Projects', id: projectId },
+                    'Analytics'
+                ]
             }
         ),
 

@@ -102,18 +102,30 @@ export const DashboardWorkspace: React.FC = () => {
 
     const orgName = (user as any)?.organization?.name;
 
+    const isRefreshing = isAnalyticsFetching || isDocsLoading || isActivityLoading;
+
+    const handleRefresh = () => {
+        refetchAnalytics();
+        refetchDocs();
+        refetchActivity();
+    };
+
+    const pendingCount = pipelineCounts.needsVerification ?? overview?.backlogCount ?? 0;
+
     return (
         <div className="p-3 sm:p-5 lg:p-6 flex-1 flex flex-col gap-4 sm:gap-5 max-w-7xl mx-auto w-full">
             {/* 1. Welcome Header */}
             <DashboardWelcomeHeader
-                pendingVerificationCount={overview?.backlogCount ?? pipelineCounts.needsVerification}
+                pendingVerificationCount={pendingCount}
                 organizationName={orgName}
+                onRefresh={handleRefresh}
+                isRefreshing={isRefreshing}
             />
 
             {/* 2. Operational KPIs */}
             <DashboardKPIs
                 totalDocuments={overview?.totalDocuments ?? overview?.totalAllTime ?? recentDocuments.length}
-                backlogCount={overview?.backlogCount ?? pipelineCounts.needsVerification}
+                backlogCount={pendingCount}
                 verifiedCount={overview?.verifiedDocuments ?? pipelineCounts.verified}
                 accuracyRate={overview?.accuracyRate ?? 100}
                 totalProjects={totalProjects}
@@ -142,7 +154,7 @@ export const DashboardWorkspace: React.FC = () => {
                     {/* Priority Attention Card */}
                     <DashboardAttentionCard
                         pendingDocument={topPendingDoc}
-                        pendingCount={overview?.backlogCount ?? pipelineCounts.needsVerification}
+                        pendingCount={pendingCount}
                         isLoading={isDocsLoading || isAnalyticsLoading}
                     />
 
