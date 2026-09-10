@@ -4,6 +4,7 @@ import { DocumentStatus } from "@/models/document.model";
 import auditLogRepository from "@/repositories/audit-log.repository";
 import documentRepository, { DocumentQueryOptions } from "@/repositories/document.repository";
 import { ApiErrors, DomainError } from "@/utils/errors";
+import { logger } from "@/utils/logger";
 import crypto from "crypto";
 import path from "path";
 import mongoose from "mongoose";
@@ -41,11 +42,14 @@ class DocumentService {
         // 4. Upload directly to Supabase Storage
         const uploadResult = await storageService.uploadFile(file.buffer, folder, filename, file.mimetype);
 
-        // Extract the text from the pdf doc
-        const rawText = await pdfService.extractTextFromPdf(file.buffer);
-
-        // Then you can store 'rawText' in your database!
-
+        // Extract text depending on file MIME type (PDF via PDF.js, Image via Gemini multimodal vision)
+        let rawText = "";
+        try {
+            rawText = await pdfService.extractTextFromDocument(file.buffer, file.mimetype);
+        } catch (extractErr: any) {
+            logger.warn(`Text extraction warning for ${file.originalname}: ${extractErr.message}`);
+            rawText = "";
+        }
 
         // 5. Persist Document and Audit Log (Without Transactions for standalone DB)
         try {
@@ -67,10 +71,14 @@ class DocumentService {
                 organizationId: new mongoose.Types.ObjectId(organizationId),
                 actorId: new mongoose.Types.ObjectId(userId),
                 documentId: document._id as mongoose.Types.ObjectId,
+                projectId: new mongoose.Types.ObjectId(projectId),
                 action: AuditAction.DOCUMENT_UPLOADED,
                 details: {
                     filename: file.originalname,
+                    originalFileName: file.originalname,
                     size: file.size,
+                    mimeType: file.mimetype,
+                    status: DocumentStatus.UPLOADED,
                     isDuplicateWarning: isDuplicate
                 },
                 ipAddress
@@ -92,7 +100,7 @@ class DocumentService {
         }
     }
 
-    async proccessDocument(documentId: string, organizationId: string,) {
+    async proccessDocument(documentId: string, organizationId: string, userId?: string, ipAddress?: string) {
         // Get document
         const document = await documentRepository.findById(documentId);
         if (!document) throw ApiErrors.documentNotFound();
@@ -104,7 +112,13 @@ class DocumentService {
         const extractedData = document.extractedData;
         const schema = activeTemplate.templateSchema;
 
-        if (!extractedData || !schema) throw ApiErrors.documentNotFound();
+        if (!schema) {
+            throw ApiErrors.badRequest("Active template schema is missing or invalid");
+        }
+
+        if (!extractedData) {
+            throw ApiErrors.badRequest("Document contains no extracted text to transform");
+        }
 
         const LLMResult = await pdfService.processPdfWithSchema(extractedData, schema.fields);
 
@@ -113,17 +127,51 @@ class DocumentService {
             processingDetails: { aiResponse: LLMResult }
         });
 
+        // Record Audit Log for DOCUMENT_TRANSFORMED
+        try {
+            await auditLogRepository.create({
+                organizationId: new mongoose.Types.ObjectId(organizationId),
+                actorId: (userId && mongoose.Types.ObjectId.isValid(userId))
+                    ? new mongoose.Types.ObjectId(userId)
+                    : (document.uploadedById as mongoose.Types.ObjectId),
+                documentId: document._id as mongoose.Types.ObjectId,
+                projectId: document.projectId as mongoose.Types.ObjectId,
+                action: AuditAction.DOCUMENT_TRANSFORMED,
+                details: {
+                    filename: document.originalFileName,
+                    originalFileName: document.originalFileName,
+                    templateName: activeTemplate.originalFileName || (activeTemplate as any).name,
+                    fieldsExtracted: Object.keys(LLMResult?.data || {}).length,
+                    status: DocumentStatus.TRANSFORMED,
+                },
+                ipAddress
+            });
+        } catch (auditErr) {
+            console.error("Failed to log DOCUMENT_TRANSFORMED:", auditErr);
+        }
+
         return LLMResult;
     }
 
-    async verifyDocument(documentId: string, organizationId: string, userId?: string) {
+    async verifyDocument(
+        documentId: string,
+        organizationId: string,
+        userId?: string,
+        ipAddress?: string,
+        correctedData?: Record<string, any>
+    ) {
         const document = await documentRepository.findByIdAndOrg(documentId, organizationId);
         if (!document) {
             throw ApiErrors.documentNotFound();
         }
 
-        // If already verified or exported and secureUrl already exists, return it directly
+        const hasCorrections = Boolean(
+            correctedData && typeof correctedData === "object" && Object.keys(correctedData).length > 0
+        );
+
+        // If already verified or exported, no corrections provided, and secureUrl already exists, return it directly
         if (
+            !hasCorrections &&
             (document.status === DocumentStatus.VERIFIED || document.status === DocumentStatus.EXPORTED) &&
             document.processingDetails?.secureUrl
         ) {
@@ -131,12 +179,17 @@ class DocumentService {
         }
 
         // Extracted data must exist to generate the verified document
-        if (!document.processingDetails?.aiResponse?.data) {
+        const currentData = document.processingDetails?.aiResponse?.data;
+        if (!currentData && !hasCorrections) {
             if (document.status === DocumentStatus.UPLOADED) {
                 throw ApiErrors.badRequest("Document has not been processed yet. Please transform the document first.");
             }
             throw ApiErrors.badRequest(`Document cannot be verified because extracted data is missing (current status: ${document.status}).`);
         }
+
+        const finalData = hasCorrections
+            ? { ...(currentData || {}), ...correctedData }
+            : currentData;
 
         // 1. Get document's project active template
         const activeTemplate = await templateRepository.activeTemplateByProject(document.projectId.toString(), organizationId);
@@ -146,7 +199,7 @@ class DocumentService {
         const templatePdfBuffer = await getPdfBufferFromUrl(activeTemplate.secureUrl);
 
         // 3. Generate PDF
-        const pdfBuffer = await generatePdfFromTemplate(activeTemplate.extractedElements, document.processingDetails.aiResponse.data, {
+        const pdfBuffer = await generatePdfFromTemplate(activeTemplate.extractedElements, finalData, {
             templatePdfBuffer: templatePdfBuffer
         });
 
@@ -157,11 +210,15 @@ class DocumentService {
         // 5. Upload directly to Supabase Storage
         const uploadResult = await storageService.uploadFile(pdfBuffer, folder, filename, 'application/pdf');
 
-        // 6. Update the document with verified status and secure url while preserving processingDetails
+        // 6. Update the document with verified status and secure url while preserving processingDetails and storing updated data
         await documentRepository.updateById(documentId, {
             status: DocumentStatus.VERIFIED,
             processingDetails: {
                 ...document.processingDetails,
+                aiResponse: {
+                    ...(document.processingDetails?.aiResponse || {}),
+                    data: finalData,
+                },
                 publicId: uploadResult.public_id,
                 secureUrl: uploadResult.secure_url,
             }
@@ -172,11 +229,17 @@ class DocumentService {
             organizationId: new mongoose.Types.ObjectId(organizationId),
             actorId: new mongoose.Types.ObjectId(userId || document.uploadedById),
             documentId: document._id as mongoose.Types.ObjectId,
+            projectId: document.projectId as mongoose.Types.ObjectId,
             action: AuditAction.DOCUMENT_VERIFIED,
             details: {
                 filename: document.originalFileName,
-                url: uploadResult.secure_url
-            }
+                originalFileName: document.originalFileName,
+                status: DocumentStatus.VERIFIED,
+                url: uploadResult.secure_url,
+                correctionsApplied: hasCorrections,
+                correctedFieldsCount: hasCorrections ? Object.keys(correctedData!).length : 0,
+            },
+            ipAddress
         });
 
         // 8. Return the secure url
@@ -276,7 +339,7 @@ class DocumentService {
         return { successful, failed, total: documentIds.length };
     }
 
-    async rejectDocument(documentId: string, organizationId: string, reason?: string, userId?: string) {
+    async rejectDocument(documentId: string, organizationId: string, reason?: string, userId?: string, ipAddress?: string) {
         const document = await documentRepository.findByIdAndOrg(documentId, organizationId);
         if (!document) throw ApiErrors.documentNotFound();
 
@@ -285,39 +348,54 @@ class DocumentService {
             organizationId: new mongoose.Types.ObjectId(organizationId),
             actorId: new mongoose.Types.ObjectId(userId || document.uploadedById),
             documentId: document._id as mongoose.Types.ObjectId,
+            projectId: document.projectId as mongoose.Types.ObjectId,
             action: AuditAction.DOCUMENT_REJECTED,
             details: {
                 filename: document.originalFileName,
+                originalFileName: document.originalFileName,
+                status: DocumentStatus.REJECTED,
                 reason: reason || "Rejected by reviewer during verification"
-            }
+            },
+            ipAddress
         });
 
         return { success: true, documentId, status: DocumentStatus.REJECTED };
     }
 
-    async updateDocumentStatus(documentId: string, organizationId: string, status: DocumentStatus, userId?: string) {
+    async updateDocumentStatus(documentId: string, organizationId: string, status: DocumentStatus, userId?: string, ipAddress?: string) {
         const document = await documentRepository.findByIdAndOrg(documentId, organizationId);
         if (!document) throw ApiErrors.documentNotFound();
 
+        const fromStatus = document.status;
         await documentRepository.updateById(documentId, { status });
         await auditLogRepository.create({
             organizationId: new mongoose.Types.ObjectId(organizationId),
             actorId: new mongoose.Types.ObjectId(userId || document.uploadedById),
             documentId: document._id as mongoose.Types.ObjectId,
-            action: status === DocumentStatus.EXPORTED ? AuditAction.DOCUMENT_STATUS_CHANGED : AuditAction.DOCUMENT_REJECTED,
+            projectId: document.projectId as mongoose.Types.ObjectId,
+            action: status === DocumentStatus.EXPORTED
+                ? AuditAction.DOCUMENT_STATUS_CHANGED
+                : status === DocumentStatus.VERIFIED
+                ? AuditAction.DOCUMENT_VERIFIED
+                : AuditAction.DOCUMENT_REJECTED,
             details: {
-                filename: document.originalFileName
-            }
+                filename: document.originalFileName,
+                originalFileName: document.originalFileName,
+                fromStatus,
+                toStatus: status,
+                status,
+            },
+            ipAddress
         });
 
-        return document.processingDetails.secureUrl;
+        return document.processingDetails?.secureUrl || document.secureUrl;
     }
 
-    async updateStatus(documentId: string, organizationId: string, status: DocumentStatus, userId?: string) {
-        return this.updateDocumentStatus(documentId, organizationId, status, userId);
+    async updateStatus(documentId: string, organizationId: string, status: DocumentStatus, userId?: string, ipAddress?: string) {
+        return this.updateDocumentStatus(documentId, organizationId, status, userId, ipAddress);
     }
 
-    async deleteDocument(documentId: string, organizationId: string, userId: string) {
+    async deleteDocument(documentId: string, organizationId: string, userId: string, ipAddress?: string) {
         const document = await documentRepository.findByIdAndOrg(documentId, organizationId);
         if (!document) throw ApiErrors.documentNotFound();
 
@@ -327,10 +405,14 @@ class DocumentService {
             organizationId: new mongoose.Types.ObjectId(organizationId),
             actorId: new mongoose.Types.ObjectId(userId),
             documentId: document._id as mongoose.Types.ObjectId,
+            projectId: document.projectId as mongoose.Types.ObjectId,
             action: AuditAction.DOCUMENT_DELETED,
             details: {
-                filename: document.originalFileName
-            }
+                filename: document.originalFileName,
+                originalFileName: document.originalFileName,
+                status: "DELETED"
+            },
+            ipAddress
         });
 
         return { success: true };

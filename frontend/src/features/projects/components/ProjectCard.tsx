@@ -26,7 +26,8 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onEdit, onDelete }) 
 
     const handleOpenProject = (e: React.MouseEvent) => {
         e.stopPropagation();
-        router.push(`/project/${project.id}`);
+        const projectId = project.id || (project as any)._id;
+        router.push(`/project/${projectId}`);
     };
 
     return (

@@ -167,11 +167,14 @@ export const documentApi = baseApi.injectEndpoints({
                 invalidatesTags: ['Documents'],
             }),
 
-        verifyDocument: builder.mutation<{ success: boolean; data: any }, { documentId: string; status?: string }>({
-            query: ({ documentId, status }) => ({
+        verifyDocument: builder.mutation<
+            { success: boolean; data: any },
+            { documentId: string; status?: string; data?: Record<string, any> }
+        >({
+            query: ({ documentId, status, data }) => ({
                 url: `/documents/verify/${documentId}`,
                 method: 'PUT',
-                body: { status: status || "VERIFIED" },
+                body: { status: status || "VERIFIED", ...(data ? { data } : {}) },
             }),
             invalidatesTags: ['Documents'],
         }),

@@ -25,6 +25,7 @@ export enum AuditAction {
     MEMBER_REMOVED = 'MEMBER_REMOVED',
     INVITE_REVOKED = 'INVITE_REVOKED',
     INVITE_ACCEPTED = 'INVITE_ACCEPTED',
+    USER_REGISTERED = 'USER_REGISTERED',
 }
 
 export interface IAuditLog extends MongooseDocument {

@@ -13,6 +13,12 @@ export function getPageDetails(pathname: string): { title: string, description: 
       description: 'Overview of your document processing activity'
     };
   }
+  if (pathname.startsWith('/project/') && pathname !== '/project') {
+    return {
+      title: 'Project Workspace',
+      description: 'Workspace details, active template, and document processing pipeline.'
+    };
+  }
   if (pathname.startsWith('/project')) {
     return {
       title: 'Projects',

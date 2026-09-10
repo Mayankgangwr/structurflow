@@ -15,6 +15,8 @@ import projectRoutes from "./routes/project.routes";
 import documentRoutes from "./routes/document.routes";
 import templateRoutes from "./routes/template.routes";
 import activityRoutes from "./routes/activity.routes";
+import analyticsRoutes from "./routes/analytics.routes";
+import sandboxRoutes from "./routes/sandbox.routes";
 
 const app = express();
 
@@ -24,7 +26,7 @@ app.use(
     cors({
         origin: config.isDevelopment
             ? "http://localhost:3000"
-            : "https//www.structurflow.com",
+            : (config.FRONTEND_URL || "https://www.structurflow.com"),
         credentials: true,
     })
 );
@@ -60,6 +62,8 @@ app.use("/api/v1/projects", projectRoutes);
 app.use("/api/v1/documents", documentRoutes);
 app.use("/api/v1/templates", templateRoutes);
 app.use("/api/v1/activity", activityRoutes);
+app.use("/api/v1/analytics", analyticsRoutes);
+app.use("/api/v1/sandbox", sandboxRoutes);
 
 // Fallback & Error Handling
 app.use(notFoundHandler);

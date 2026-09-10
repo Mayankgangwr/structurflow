@@ -123,6 +123,33 @@ const ACTION_CONFIGS: Record<string, ActionConfig> = {
         badgeText: "text-rose-800",
         label: "Extraction Rejected",
     },
+    [AuditAction.TEMPLATE_UPLOADED]: {
+        icon: FileUp,
+        color: "text-indigo-600",
+        bg: "bg-indigo-50",
+        border: "border-indigo-200",
+        badgeBg: "bg-indigo-100/70",
+        badgeText: "text-indigo-800",
+        label: "Template Uploaded",
+    },
+    [AuditAction.TEMPLATE_PROCESSED]: {
+        icon: Cpu,
+        color: "text-teal-600",
+        bg: "bg-teal-50",
+        border: "border-teal-200",
+        badgeBg: "bg-teal-100/70",
+        badgeText: "text-teal-800",
+        label: "Template Processed",
+    },
+    [AuditAction.USER_REGISTERED]: {
+        icon: UserCheck,
+        color: "text-indigo-600",
+        bg: "bg-indigo-50",
+        border: "border-indigo-200",
+        badgeBg: "bg-indigo-100/70",
+        badgeText: "text-indigo-800",
+        label: "User Registered",
+    },
     [AuditAction.PROJECT_CREATED]: {
         icon: FolderPlus,
         color: "text-blue-600",
@@ -366,10 +393,42 @@ const ActivityTimelineItem: React.FC<TimelineItemProps> = ({ activity, isLast = 
                         </span>
                     </span>
                 );
+            case AuditAction.TEMPLATE_UPLOADED:
+                return (
+                    <span>
+                        uploaded schema template{" "}
+                        <span className="font-semibold text-slate-900">
+                            {filename || "template"}
+                        </span>
+                    </span>
+                );
+            case AuditAction.TEMPLATE_PROCESSED:
+                return (
+                    <span>
+                        analyzed and generated extraction schema for{" "}
+                        <span className="font-semibold text-slate-900">
+                            {filename || "template"}
+                        </span>
+                        {details.fieldsDetected !== undefined && (
+                            <span className="inline-flex items-center ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-teal-50 text-teal-700 border border-teal-200">
+                                {details.fieldsDetected} fields detected
+                            </span>
+                        )}
+                    </span>
+                );
+            case AuditAction.USER_REGISTERED:
+                return (
+                    <span>
+                        registered account and initialized workspace{" "}
+                        <span className="font-semibold text-slate-900">
+                            {details.organizationName || "workspace"}
+                        </span>
+                    </span>
+                );
             case AuditAction.MEMBER_INVITED:
                 return (
                     <span>
-                        invited{" "}
+                        {details.isResend ? "resent invitation to " : "invited "}
                         <span className="font-semibold text-slate-900">
                             {targetEmail || "member"}
                         </span>{" "}
@@ -377,6 +436,11 @@ const ActivityTimelineItem: React.FC<TimelineItemProps> = ({ activity, isLast = 
                         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-800">
                             {details.role || "MEMBER"}
                         </span>
+                        {details.isResend && (
+                            <span className="inline-flex items-center ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                Resent
+                            </span>
+                        )}
                     </span>
                 );
             case AuditAction.MEMBER_ROLE_UPDATED:

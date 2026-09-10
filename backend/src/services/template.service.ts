@@ -347,16 +347,22 @@ class TemplateService {
                 isActive: true,
             });
 
+            // Ensure any previous active templates for this project are deactivated
+            await templateRepository.deactivateOtherTemplatesInProject(projectId, organizationId, document._id);
+
             await projectRepository.updateTemplate(projectId, document._id as mongoose.Types.ObjectId);
 
             await auditLogRepository.create({
                 organizationId: new mongoose.Types.ObjectId(organizationId),
                 actorId: new mongoose.Types.ObjectId(userId),
                 documentId: document._id as mongoose.Types.ObjectId,
+                projectId: new mongoose.Types.ObjectId(projectId),
                 action: AuditAction.TEMPLATE_UPLOADED,
                 details: {
                     filename: file.originalname,
+                    originalFileName: file.originalname,
                     size: file.size,
+                    status: TemplateStatus.READY,
                     isDuplicateWarning: isDuplicate
                 },
                 ipAddress
@@ -436,6 +442,25 @@ class TemplateService {
                     message: 'Template processed successfully!',
                 },
             });
+
+            // Record Audit Log for TEMPLATE_PROCESSED
+            try {
+                await auditLogRepository.create({
+                    organizationId: template.organizationId as mongoose.Types.ObjectId,
+                    actorId: template.uploadedById as mongoose.Types.ObjectId,
+                    documentId: template._id as mongoose.Types.ObjectId,
+                    projectId: template.projectId as mongoose.Types.ObjectId,
+                    action: AuditAction.TEMPLATE_PROCESSED,
+                    details: {
+                        filename: template.originalFileName,
+                        originalFileName: template.originalFileName,
+                        fieldsDetected: Object.keys(aiResult?.schema?.fields || {}).length,
+                        status: TemplateStatus.READY,
+                    },
+                });
+            } catch (auditErr) {
+                console.error("Failed to log TEMPLATE_PROCESSED:", auditErr);
+            }
 
             return updatedTemplate;
 

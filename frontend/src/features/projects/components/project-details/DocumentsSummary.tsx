@@ -12,7 +12,7 @@ const DocumentsSummary: React.FC<IDocumentsSummaryProps> = ({ projectId }) => {
     const summary = summaryData?.data;
 
     return (
-        <div className={cn("hidden flex-col gap-1.5", summary?.TOTAL && 'sm:flex')}>
+        <div className="flex flex-col gap-1.5">
             <h2 className="font-headline-md text-headline-md text-text-primary">Documents Summary</h2>
             <div className="bg-surface border border-border-subtle rounded-xl p-md flex flex-col gap-sm hover:border-primary/30 transition-colors shadow-sm">
                 {isLoading || !summary ? (

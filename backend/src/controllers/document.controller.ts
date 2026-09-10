@@ -35,7 +35,9 @@ export const documentController = {
         if (!documentId) throw ApiErrors.missingRequiredField('documentId');
         if (!organizationId) throw ApiErrors.missingRequiredField('organizationId');
 
-        const result = await documentService.proccessDocument(documentId, organizationId);
+        const userId = req.user?._id;
+        const ip = req.ip || req.socket.remoteAddress;
+        const result = await documentService.proccessDocument(documentId, organizationId, userId, ip);
 
         return ok(res, result, "Document processed successfully");
     }),
@@ -54,11 +56,13 @@ export const documentController = {
     verifyDocument: asyncHandler(async (req: Request, res: Response) => {
         const documentId = (req.params.id || req.body.documentId) as string;
         const organizationId = req.headers['x-organization-id'] as string;
+        const { data } = req.body;
 
         if (!documentId) throw ApiErrors.missingRequiredField('documentId');
         if (!organizationId) throw ApiErrors.missingRequiredField('organizationId');
 
-        const result = await documentService.verifyDocument(documentId, organizationId, req.user?._id);
+        const ip = req.ip || req.socket.remoteAddress;
+        const result = await documentService.verifyDocument(documentId, organizationId, req.user?._id, ip, data);
         return ok(res, result, "Document verified successfully");
     }),
 
@@ -81,7 +85,8 @@ export const documentController = {
         if (!documentId) throw ApiErrors.missingRequiredField('documentId');
         if (!organizationId) throw ApiErrors.orgIdRequired();
 
-        const result = await documentService.rejectDocument(documentId, organizationId, reason, req.user?._id);
+        const ip = req.ip || req.socket.remoteAddress;
+        const result = await documentService.rejectDocument(documentId, organizationId, reason, req.user?._id, ip);
         return ok(res, result, "Document rejected successfully");
     }),
 
@@ -153,7 +158,8 @@ export const documentController = {
         if (!id) throw ApiErrors.missingRequiredField('Document Id');
         if (!organizationId) throw ApiErrors.missingRequiredField('organizationId');
 
-        const result = await documentService.updateDocumentStatus(id, organizationId, status, req.user?._id);
+        const ip = req.ip || req.socket.remoteAddress;
+        const result = await documentService.updateDocumentStatus(id, organizationId, status, req.user?._id, ip);
         return ok(res, result, "Document status updated successfully");
     }),
 
@@ -165,7 +171,8 @@ export const documentController = {
         if (!id) throw ApiErrors.missingRequiredField('Document Id');
         if (!organizationId) throw ApiErrors.orgIdRequired();
 
-        await documentService.deleteDocument(id, organizationId, userId);
+        const ip = req.ip || req.socket.remoteAddress;
+        await documentService.deleteDocument(id, organizationId, userId, ip);
 
         return ok(res, { success: true }, "Document deleted successfully");
     }),

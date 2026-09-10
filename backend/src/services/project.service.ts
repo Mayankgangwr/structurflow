@@ -16,13 +16,14 @@ class ProjectService {
         // Record Audit Log
         try {
             await auditLogRepository.create({
-                organizationId,
-                actorId: userId,
-                projectId: project._id,
+                organizationId: new mongoose.Types.ObjectId(organizationId),
+                actorId: new mongoose.Types.ObjectId(userId),
+                projectId: project._id as mongoose.Types.ObjectId,
                 action: AuditAction.PROJECT_CREATED,
                 details: {
                     projectName: project.name,
                     description: project.description,
+                    status: "ACTIVE",
                 },
             });
         } catch (err) {
@@ -49,13 +50,14 @@ class ProjectService {
         if (organizationId && userId) {
             try {
                 await auditLogRepository.create({
-                    organizationId,
-                    actorId: userId,
-                    projectId: project._id,
+                    organizationId: new mongoose.Types.ObjectId(organizationId),
+                    actorId: new mongoose.Types.ObjectId(userId),
+                    projectId: project._id as mongoose.Types.ObjectId,
                     action: AuditAction.PROJECT_UPDATED,
                     details: {
                         projectName: project.name,
                         description: project.description,
+                        status: "UPDATED",
                     },
                 });
             } catch (err) {
@@ -73,12 +75,13 @@ class ProjectService {
         if (organizationId && userId) {
             try {
                 await auditLogRepository.create({
-                    organizationId,
-                    actorId: userId,
-                    projectId: project._id,
+                    organizationId: new mongoose.Types.ObjectId(organizationId),
+                    actorId: new mongoose.Types.ObjectId(userId),
+                    projectId: project._id as mongoose.Types.ObjectId,
                     action: AuditAction.PROJECT_DELETED,
                     details: {
                         projectName: project.name,
+                        status: "DELETED",
                     },
                 });
             } catch (err) {

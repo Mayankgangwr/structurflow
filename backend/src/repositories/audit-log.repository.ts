@@ -34,6 +34,7 @@ export const CATEGORY_ACTIONS: Record<string, AuditAction[]> = {
         AuditAction.MEMBER_REMOVED,
         AuditAction.INVITE_REVOKED,
         AuditAction.INVITE_ACCEPTED,
+        AuditAction.USER_REGISTERED,
     ],
     PROJECTS: [
         AuditAction.PROJECT_CREATED,
@@ -132,25 +133,19 @@ class AuditLogRepository extends BaseRepository<IAuditLog> {
             // Verifications & Rejections in past 24 hours
             this.model.countDocuments({
                 organizationId: orgObjectId,
-                action: { $in: [AuditAction.DOCUMENT_VERIFIED, AuditAction.DOCUMENT_REJECTED] },
+                action: { $in: CATEGORY_ACTIONS.VERIFICATION },
                 createdAt: { $gte: oneDayAgo },
             }),
-            // Uploads in past 24 hours
+            // Uploads & Document actions in past 24 hours
             this.model.countDocuments({
                 organizationId: orgObjectId,
-                action: AuditAction.DOCUMENT_UPLOADED,
+                action: { $in: [AuditAction.DOCUMENT_UPLOADED, AuditAction.TEMPLATE_UPLOADED] },
                 createdAt: { $gte: oneDayAgo },
             }),
-            // Team changes in past 24 hours
+            // Team & Governance changes in past 24 hours
             this.model.countDocuments({
                 organizationId: orgObjectId,
-                action: {
-                    $in: [
-                        AuditAction.MEMBER_INVITED,
-                        AuditAction.MEMBER_ROLE_UPDATED,
-                        AuditAction.MEMBER_REMOVED,
-                    ],
-                },
+                action: { $in: CATEGORY_ACTIONS.TEAM },
                 createdAt: { $gte: oneDayAgo },
             }),
             // Total events all-time

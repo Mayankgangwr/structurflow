@@ -22,6 +22,7 @@ import {
     AlertTriangle,
     Eye,
     ShieldCheck,
+    RotateCcw,
 } from "lucide-react";
 import { cn, formatSize, getFileType } from "@/lib/utils";
 import toast from "react-hot-toast";
@@ -36,7 +37,7 @@ export interface VerificationWorkbenchModalProps {
     totalInQueue: number;
     onPrevious: () => void;
     onNext: () => void;
-    onApprove: (documentId: string) => Promise<void>;
+    onApprove: (documentId: string, corrections?: Record<string, any>) => Promise<void>;
     onReject: (documentId: string, reason?: string) => Promise<void>;
     isApproving?: boolean;
     isRejecting?: boolean;
@@ -93,27 +94,104 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [isOpen, isRejectDialogOpen, currentIndex, totalInQueue, onPrevious, onNext, onClose]);
 
-    if (!isOpen || !document) return null;
-
-    const fileName = document.originalFileName || document.originalFilename;
-    const isPdf = document.mimeType?.includes("pdf") || fileName?.toLowerCase().endsWith(".pdf");
-    const isImage = document.mimeType?.includes("image");
+    const fileName = document?.originalFileName || document?.originalFilename || "Document";
+    const isPdf = document?.mimeType?.includes("pdf") || fileName?.toLowerCase().endsWith(".pdf");
+    const isImage = document?.mimeType?.includes("image");
 
     const projectName =
-        typeof (document as any).projectId === "object"
-            ? (document as any).projectId?.name
+        typeof (document as any)?.projectId === "object"
+            ? (document as any)?.projectId?.name
             : "Assigned Project";
 
-    const rawAiData = document.processingDetails?.aiResponse?.data || docDetailsRes?.data?.document?.processingDetails?.aiResponse?.data;
+    const rawAiData = document?.processingDetails?.aiResponse?.data || docDetailsRes?.data?.document?.processingDetails?.aiResponse?.data;
     const extractedFields: ExtractedFieldItem[] = React.useMemo(() => normalizeExtractedFields(rawAiData), [rawAiData]);
+
+    // Local edited values state: key -> current string value
+    const [editedValues, setEditedValues] = useState<Record<string, string>>({});
+
+    // Reset / initialize editedValues whenever document or rawAiData changes
+    useEffect(() => {
+        if (!rawAiData) {
+            setEditedValues({});
+            return;
+        }
+        const initial: Record<string, string> = {};
+        extractedFields.forEach((f) => {
+            initial[f.key] = f.value;
+        });
+        setEditedValues(initial);
+    }, [document?._id, rawAiData]);
+
+    // Check if an individual field has been modified by the user
+    const isFieldModified = (key: string) => {
+        const original = extractedFields.find((f) => f.key === key)?.value ?? "";
+        return (editedValues[key] ?? "") !== original;
+    };
+
+    // Keys of all modified fields
+    const modifiedKeys = React.useMemo(() => {
+        return Object.keys(editedValues).filter((k) => isFieldModified(k));
+    }, [editedValues, extractedFields]);
+
+    const hasModifications = modifiedKeys.length > 0;
+
+    const handleValueChange = (key: string, val: string) => {
+        setEditedValues((prev) => ({
+            ...prev,
+            [key]: val,
+        }));
+    };
+
+    const handleResetField = (key: string) => {
+        const original = extractedFields.find((f) => f.key === key)?.value ?? "";
+        setEditedValues((prev) => ({
+            ...prev,
+            [key]: original,
+        }));
+        toast.success(`Reset "${key}" to original AI value`);
+    };
+
+    const handleResetAll = () => {
+        const initial: Record<string, string> = {};
+        extractedFields.forEach((f) => {
+            initial[f.key] = f.value;
+        });
+        setEditedValues(initial);
+        toast.success("Reset all fields to original values");
+    };
+
+    // Real-time JSON data reflecting current edits
+    const liveJsonData = React.useMemo(() => {
+        if (!rawAiData) return {};
+        if (!hasModifications) return rawAiData;
+
+        if (Array.isArray(rawAiData)) {
+            return rawAiData.map((item: any, idx: number) => {
+                const k = item.fieldName || item.name || item.key || item.field || `field_${idx}`;
+                if (k in editedValues) {
+                    return {
+                        ...item,
+                        value: editedValues[k],
+                        originalValue: editedValues[k],
+                    };
+                }
+                return item;
+            });
+        }
+        if (typeof rawAiData === "object" && rawAiData !== null) {
+            return { ...rawAiData, ...editedValues };
+        }
+        return editedValues;
+    }, [rawAiData, editedValues, hasModifications]);
 
     const filteredFields = extractedFields.filter((field) => {
         if (!fieldSearch.trim()) return true;
         const search = fieldSearch.toLowerCase();
+        const currentVal = editedValues[field.key] ?? field.value;
         return (
             field.label.toLowerCase().includes(search) ||
             field.key.toLowerCase().includes(search) ||
-            field.value.toLowerCase().includes(search)
+            currentVal.toLowerCase().includes(search)
         );
     });
 
@@ -126,7 +204,11 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
 
     const handleApproveAndNext = async () => {
         if (!document) return;
-        await onApprove(document._id);
+        if (hasModifications) {
+            await onApprove(document._id, liveJsonData);
+        } else {
+            await onApprove(document._id);
+        }
     };
 
     const handleConfirmReject = async () => {
@@ -147,6 +229,8 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
     };
 
     const transformedPdfUrl = typeof previewRes?.data?.url === "string" ? previewRes.data.url : "";
+
+    if (!isOpen || !document) return null;
 
     return (
         <>
@@ -292,6 +376,11 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                                 >
                                     <FileCheck2 className="w-3.5 h-3.5 text-amber-600" />
                                     <span>Extracted Data ({extractedFields.length})</span>
+                                    {hasModifications && (
+                                        <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                            {modifiedKeys.length} edited
+                                        </span>
+                                    )}
                                 </button>
                                 <button
                                     onClick={() => setActiveTab("preview")}
@@ -341,15 +430,39 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
+                                        {hasModifications && canVerify && (
+                                            <div className="flex items-center justify-between p-2.5 px-3.5 bg-amber-500/10 border border-amber-500/25 rounded-xl text-xs text-amber-900 mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                                                    <span className="font-semibold">
+                                                        {modifiedKeys.length} {modifiedKeys.length === 1 ? "field" : "fields"} edited by auditor
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    onClick={handleResetAll}
+                                                    className="text-xs font-semibold text-amber-700 hover:text-amber-900 underline cursor-pointer"
+                                                >
+                                                    Reset All
+                                                </button>
+                                            </div>
+                                        )}
+
                                         {filteredFields.map((field) => {
                                             const isCopied = copiedField === field.key;
+                                            const isModified = isFieldModified(field.key);
+                                            const currentValue = editedValues[field.key] ?? field.value;
 
                                             return (
                                                 <div
                                                     key={field.id}
-                                                    className="p-3.5 bg-slate-50/80 hover:bg-slate-50 border border-slate-200/80 rounded-xl transition-all group"
+                                                    className={cn(
+                                                        "p-3.5 rounded-xl border transition-all group",
+                                                        isModified
+                                                            ? "bg-amber-50/50 border-amber-300 shadow-2xs"
+                                                            : "bg-slate-50/80 hover:bg-slate-50 border-slate-200/80"
+                                                    )}
                                                 >
-                                                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                                                    <div className="flex items-center justify-between gap-2 mb-2">
                                                         <div className="flex items-center gap-2 flex-wrap min-w-0">
                                                             <span className="text-xs font-bold text-slate-800 tracking-tight">
                                                                 {field.label}
@@ -364,14 +477,30 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                                                                     {field.type}
                                                                 </span>
                                                             )}
+                                                            {isModified && (
+                                                                <span className="text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.2 rounded-full flex items-center gap-1 shadow-2xs">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                                                    Modified
+                                                                </span>
+                                                            )}
                                                         </div>
 
                                                         <div className="flex items-center gap-1.5 shrink-0">
                                                             <span className="text-[11px] font-mono text-slate-400 hidden sm:inline" title="Schema key">
                                                                 {field.key}
                                                             </span>
+                                                            {isModified && canVerify && (
+                                                                <button
+                                                                    onClick={() => handleResetField(field.key)}
+                                                                    className="text-amber-700 hover:text-amber-900 p-1 text-[11px] font-medium flex items-center gap-0.5 cursor-pointer rounded hover:bg-amber-100/60"
+                                                                    title="Reset to AI original"
+                                                                >
+                                                                    <RotateCcw className="w-3 h-3" />
+                                                                    <span className="hidden sm:inline text-[10px]">Reset</span>
+                                                                </button>
+                                                            )}
                                                             <button
-                                                                onClick={() => handleCopy(field.key, field.value)}
+                                                                onClick={() => handleCopy(field.key, currentValue)}
                                                                 className="text-slate-400 hover:text-slate-600 p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded hover:bg-slate-200/50"
                                                                 title={`Copy ${field.label}`}
                                                             >
@@ -384,9 +513,40 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                                                         </div>
                                                     </div>
 
-                                                    <div className="text-sm font-medium text-slate-900 break-words whitespace-pre-wrap font-mono bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-2xs">
-                                                        {field.value || <span className="text-slate-300 italic font-sans font-normal">Not extracted</span>}
-                                                    </div>
+                                                    {/* Interactive Editable Field Input */}
+                                                    {canVerify ? (
+                                                        currentValue.length > 80 || currentValue.includes("\n") ? (
+                                                            <textarea
+                                                                value={currentValue}
+                                                                onChange={(e) => handleValueChange(field.key, e.target.value)}
+                                                                rows={Math.min(4, Math.max(2, currentValue.split("\n").length))}
+                                                                className={cn(
+                                                                    "w-full text-xs sm:text-sm font-medium font-mono p-2.5 rounded-lg border transition-all resize-y",
+                                                                    isModified
+                                                                        ? "bg-white border-amber-400 text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                                                                        : "bg-white border-slate-200/90 text-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 hover:border-slate-300"
+                                                                )}
+                                                                placeholder="Enter value..."
+                                                            />
+                                                        ) : (
+                                                            <input
+                                                                type="text"
+                                                                value={currentValue}
+                                                                onChange={(e) => handleValueChange(field.key, e.target.value)}
+                                                                className={cn(
+                                                                    "w-full text-xs sm:text-sm font-medium font-mono p-2.5 h-9 rounded-lg border transition-all",
+                                                                    isModified
+                                                                        ? "bg-white border-amber-400 text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                                                                        : "bg-white border-slate-200/90 text-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 hover:border-slate-300"
+                                                                )}
+                                                                placeholder="Enter value..."
+                                                            />
+                                                        )
+                                                    ) : (
+                                                        <div className="text-sm font-medium text-slate-900 break-words whitespace-pre-wrap font-mono bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                                                            {currentValue || <span className="text-slate-300 italic font-sans font-normal">Not extracted</span>}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -418,8 +578,16 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                             )}
 
                             {activeTab === "json" && (
-                                <div className="bg-slate-900 text-slate-100 p-4 rounded-xl text-xs font-mono overflow-auto max-h-[550px] shadow-inner">
-                                    <pre>{JSON.stringify(rawAiData || {}, null, 2)}</pre>
+                                <div className="space-y-2">
+                                    {hasModifications && (
+                                        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5">
+                                            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                                            <span>Live JSON preview reflecting {modifiedKeys.length} human-in-the-loop corrections</span>
+                                        </div>
+                                    )}
+                                    <div className="bg-slate-900 text-slate-100 p-4 rounded-xl text-xs font-mono overflow-auto max-h-[550px] shadow-inner">
+                                        <pre>{JSON.stringify(liveJsonData || {}, null, 2)}</pre>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -480,7 +648,12 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                                 size="sm"
                                 disabled={isApproving || isRejecting}
                                 onClick={handleApproveAndNext}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold h-9 px-4 rounded-lg shadow-sm cursor-pointer flex items-center gap-1.5"
+                                className={cn(
+                                    "text-white text-xs font-semibold h-9 px-4 rounded-lg shadow-sm cursor-pointer flex items-center gap-1.5 transition-all",
+                                    hasModifications
+                                        ? "bg-amber-600 hover:bg-amber-700"
+                                        : "bg-emerald-600 hover:bg-emerald-700"
+                                )}
                             >
                                 {isApproving ? (
                                     <>
@@ -491,7 +664,13 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                                     <>
                                         <CheckCircle2 className="w-4 h-4" />
                                         <span>
-                                            {currentIndex < totalInQueue - 1 ? "Approve & Next" : "Approve & Finish"}
+                                            {hasModifications
+                                                ? currentIndex < totalInQueue - 1
+                                                    ? "Approve with Corrections & Next"
+                                                    : "Approve with Corrections & Finish"
+                                                : currentIndex < totalInQueue - 1
+                                                ? "Approve & Next"
+                                                : "Approve & Finish"}
                                         </span>
                                     </>
                                 )}

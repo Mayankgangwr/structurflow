@@ -80,8 +80,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
     const isImage = document.mimeType?.includes("image");
     const isPdf = document.mimeType?.includes("pdf") || fileName?.toLowerCase().endsWith(".pdf");
 
-    const resolvedProjectName =
-        projectName ||
+    const resolvedProjectName = projectName ||
         (typeof (document as any).projectId === "object"
             ? (document as any).projectId?.name
             : undefined);
@@ -183,7 +182,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
                     {/* Transform button for UPLOADED */}
                     {document.status === "UPLOADED" && can("verify_documents") && (
                         <Button
-                            type="button"
+                            variant="outline"
                             title="Transform Document"
                             disabled={isProcessing}
                             onClick={() => onProcess(document._id)}

@@ -72,7 +72,7 @@ const ActivityKPIHeader: React.FC<ActivityKPIHeaderProps> = ({
     ];
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
             {cards.map((card) => {
                 const Icon = card.icon;
                 const isActive = activeCategory === card.id;
@@ -85,49 +85,49 @@ const ActivityKPIHeader: React.FC<ActivityKPIHeaderProps> = ({
                             if (onActionReset) onActionReset();
                         }}
                         className={cn(
-                            "group relative p-3 sm:p-4 rounded-xl bg-white border border-slate-200/80 shadow-xs transition-all duration-200 cursor-pointer select-none flex flex-col justify-between hover:shadow-md hover:-translate-y-0.5",
+                            "group relative p-2.5 sm:p-4 rounded-xl bg-white border border-slate-200/80 shadow-xs transition-all duration-200 cursor-pointer select-none flex flex-col justify-between hover:shadow-md hover:-translate-y-0.5",
                             isActive ? card.activeBorder : "hover:border-slate-300"
                         )}
                     >
                         <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">
                                         {card.label}
                                     </span>
                                     {isActive && (
-                                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
                                     )}
                                 </div>
 
                                 {isLoading ? (
-                                    <div className="h-8 w-16 bg-slate-100 rounded animate-pulse my-1" />
+                                    <div className="h-7 sm:h-8 w-14 sm:w-16 bg-slate-100 rounded animate-pulse my-1" />
                                 ) : (
-                                    <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight my-0.5">
+                                    <div className="text-xl sm:text-3xl font-bold text-slate-900 tracking-tight my-0.5">
                                         {card.value.toLocaleString()}
                                     </div>
                                 )}
 
-                                <div className="text-xs text-slate-500 font-medium truncate">
+                                <div className="text-[11px] sm:text-xs text-slate-500 font-medium truncate">
                                     {card.sub}
                                 </div>
                             </div>
 
                             <div
                                 className={cn(
-                                    "p-2 sm:p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-105",
+                                    "p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl shrink-0 transition-transform group-hover:scale-105",
                                     card.iconBg
                                 )}
                             >
-                                <Icon className="w-5 h-5" />
+                                <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                             </div>
                         </div>
 
-                        <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                        <div className="mt-2.5 sm:mt-3 pt-2 sm:pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400">
                             <span className="truncate">{card.metaText}</span>
-                            <span className="inline-flex items-center gap-0.5 text-slate-500 group-hover:text-primary transition-colors font-medium">
+                            <span className="inline-flex items-center gap-0.5 text-slate-500 group-hover:text-primary transition-colors font-medium shrink-0 ml-1">
                                 Filter
-                                <ArrowUpRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                                <ArrowUpRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                             </span>
                         </div>
                     </div>

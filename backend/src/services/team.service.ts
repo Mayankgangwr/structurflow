@@ -11,6 +11,7 @@ import { generateToken } from "@/utils/generate";
 import { mailService } from "./mail.service";
 import auditLogRepository from "@/repositories/audit-log.repository";
 import { AuditAction } from "@/models/audit-log.model";
+import mongoose from "mongoose";
 
 class TeamService {
     /**
@@ -389,6 +390,24 @@ class TeamService {
             org?.name || "the workspace",
             invite.token
         );
+
+        // Record Audit Log
+        try {
+            await auditLogRepository.create({
+                organizationId: new mongoose.Types.ObjectId(organizationId),
+                actorId: new mongoose.Types.ObjectId(actorUserId),
+                action: AuditAction.MEMBER_INVITED,
+                details: {
+                    inviteId,
+                    targetEmail: invite.email,
+                    role: invite.role,
+                    isResend: true,
+                    status: "RESENT",
+                },
+            });
+        } catch (auditErr) {
+            console.error("Failed to record audit log for RESEND_INVITE:", auditErr);
+        }
 
         return { success: true, email: invite.email, expiresAt: newExpiresAt };
     }

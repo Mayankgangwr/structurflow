@@ -219,10 +219,14 @@ const VerificationWorkspace: React.FC = () => {
     };
 
     // Workbench Approve & Next Progression Flow
-    const handleWorkbenchApprove = async (documentId: string) => {
+    const handleWorkbenchApprove = async (documentId: string, corrections?: Record<string, any>) => {
         try {
-            await verifyDocumentMutation({ documentId, status: "VERIFIED" }).unwrap();
-            toast.success("Document approved & signed off");
+            await verifyDocumentMutation({
+                documentId,
+                status: "VERIFIED",
+                ...(corrections ? { data: corrections } : {})
+            }).unwrap();
+            toast.success(corrections ? "Document approved with corrections" : "Document approved & signed off");
 
             // Advance to next document if available
             if (workbenchState.currentIndex < documents.length - 1) {
@@ -444,19 +448,21 @@ const VerificationWorkspace: React.FC = () => {
             )}
 
             {/* Side-by-Side Verification Workbench Modal */}
-            <VerificationWorkbenchModal
-                isOpen={workbenchState.isOpen}
-                onClose={() => setWorkbenchState({ isOpen: false, currentIndex: 0, document: null })}
-                document={workbenchState.document}
-                currentIndex={workbenchState.currentIndex}
-                totalInQueue={documents.length}
-                onPrevious={handleWorkbenchPrevious}
-                onNext={handleWorkbenchNext}
-                onApprove={handleWorkbenchApprove}
-                onReject={handleWorkbenchReject}
-                isApproving={isSingleVerifying}
-                isRejecting={isRejectingMutation}
-            />
+            {workbenchState.isOpen && workbenchState.document && (
+                <VerificationWorkbenchModal
+                    isOpen={workbenchState.isOpen}
+                    onClose={() => setWorkbenchState({ isOpen: false, currentIndex: 0, document: null })}
+                    document={workbenchState.document}
+                    currentIndex={workbenchState.currentIndex}
+                    totalInQueue={documents.length}
+                    onPrevious={handleWorkbenchPrevious}
+                    onNext={handleWorkbenchNext}
+                    onApprove={handleWorkbenchApprove}
+                    onReject={handleWorkbenchReject}
+                    isApproving={isSingleVerifying}
+                    isRejecting={isRejectingMutation}
+                />
+            )}
 
             {/* Rejection Modal from Table Action */}
             {rejectingDoc && (

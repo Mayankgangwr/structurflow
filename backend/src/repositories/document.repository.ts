@@ -184,7 +184,6 @@ class DocumentRepository extends BaseRepository<IDocument> {
             }
             if (stat._id === 'VERIFIED') {
                 summary.verified += count;
-                summary.exported += count;
             }
             if (stat._id === 'EXPORTED') {
                 summary.exported += count;

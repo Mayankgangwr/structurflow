@@ -2,6 +2,8 @@ import organizationRepository from "@/repositories/organization.repository";
 import userRepository from "@/repositories/user.repository";
 import membershipRepository from "@/repositories/membership.repository";
 import invitationRepository from "@/repositories/invitation.repository";
+import auditLogRepository from "@/repositories/audit-log.repository";
+import { AuditAction } from "@/models/audit-log.model";
 import { RegisterFormData } from "@/schemas/auth.schema";
 import { ApiErrors } from "@/utils/errors";
 import bcrypt from "bcrypt";
@@ -95,6 +97,23 @@ class AuthService {
                 organizationId: organization._id,
                 role: Role.OWNER,
             });
+
+            // Record Audit Log for USER_REGISTERED & Organization Initialization
+            try {
+                await auditLogRepository.create({
+                    organizationId: organization._id,
+                    actorId: user._id,
+                    action: AuditAction.USER_REGISTERED,
+                    details: {
+                        email: user.email,
+                        organizationName: organization.name,
+                        role: Role.OWNER,
+                        status: "INITIALIZED",
+                    },
+                });
+            } catch (auditErr) {
+                console.error("Failed to log USER_REGISTERED:", auditErr);
+            }
 
             const authResponse = this.generateAuthResponse(user, [membership]);
             return {
@@ -225,6 +244,15 @@ class AuthService {
                     lastName: payload.lastName || '',
                     isEmailVerified: true
                 });
+            } else {
+                // Security: If user already exists, require password confirmation before issuing auth tokens
+                if (!payload.password) {
+                    throw ApiErrors.badRequest("Password confirmation is required to accept this invitation.");
+                }
+                const isPasswordValid = await bcrypt.compare(payload.password, user.passwordHash);
+                if (!isPasswordValid) {
+                    throw ApiErrors.invalidCredentials();
+                }
             }
 
             if (!user) throw ApiErrors.userNotFound();
@@ -240,6 +268,23 @@ class AuthService {
 
             await redis.del(`org_invite:${token}`);
             await invitationRepository.markAccepted(token);
+
+            // Record Audit Log for INVITE_ACCEPTED
+            try {
+                await auditLogRepository.create({
+                    organizationId: new mongoose.Types.ObjectId(organizationId),
+                    actorId: user._id,
+                    action: AuditAction.INVITE_ACCEPTED,
+                    details: {
+                        targetEmail: email,
+                        role,
+                        status: "ACCEPTED",
+                        joinedAt: new Date().toISOString(),
+                    },
+                });
+            } catch (auditErr) {
+                console.error("Failed to log INVITE_ACCEPTED:", auditErr);
+            }
 
             const memberships = await membershipRepository.findAllByUser(user._id.toString());
             return this.generateAuthResponse(user, memberships);

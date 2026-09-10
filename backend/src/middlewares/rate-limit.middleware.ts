@@ -4,7 +4,7 @@ import { fail } from "@/utils/response";
 
 export const authRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 20, // Limit each IP to 20 auth request per windowMs
+    max: 50, // Limit each IP to 20 auth request per windowMs
     handler: (req, res) => {
         fail(res, 429, "Too Many requests", [
             {
@@ -27,6 +27,21 @@ export const globalRateLimiter = rateLimit({
             message: 'To many requests from the IP, please try again later',
         }
     } as ApiResponse,
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+export const sandboxRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // Limit each IP to 10 guest transformations per 15 mins
+    handler: (req, res) => {
+        fail(res, 429, "Too Many requests", [
+            {
+                code: 'RATE_LIMIT_EXCEEDED',
+                message: 'Guest sandbox limit reached (10 transformations per 15 mins). Please wait or create a free workspace for unlimited processing.'
+            }
+        ]);
+    },
     standardHeaders: true,
     legacyHeaders: false
 });

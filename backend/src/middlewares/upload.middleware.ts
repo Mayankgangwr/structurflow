@@ -7,7 +7,9 @@ const MAX_FILE_SIZE_bYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const allowedMimeType = [
     'application/pdf',
     'image/jpeg',
-    'image/png'
+    'image/png',
+    'image/webp',
+    'text/plain'
 ];
 
 const storage = multer.memoryStorage(); // Store in RAM temporarily before pushing to Cloudinary

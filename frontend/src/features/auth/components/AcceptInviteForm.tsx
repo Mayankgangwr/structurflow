@@ -72,6 +72,18 @@ export const AcceptInviteForm: React.FC = () => {
         handleAcceptInvite(token, data);
     };
 
+    const [existingPassword, setExistingPassword] = React.useState("");
+    const [existingPasswordError, setExistingPasswordError] = React.useState("");
+
+    const handleExistingUserSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!existingPassword) {
+            setExistingPasswordError("Please enter your account password to confirm identity.");
+            return;
+        }
+        handleAcceptInvite(token, { password: existingPassword });
+    };
+
     return (
         <>
             <div className="flex flex-col items-center mb-xl text-center">
@@ -89,23 +101,49 @@ export const AcceptInviteForm: React.FC = () => {
             </div>
 
             {inviteInfo?.isRegistered ? (
-                <div className="flex flex-col gap-4 text-center">
-                    <p className="text-sm text-on-surface-variant">
-                        You have an existing account for <span className="font-semibold text-on-background">{inviteInfo.email}</span>. Click below to accept the invitation and join <span className="font-semibold text-on-background">{inviteInfo.organizationName}</span> as a <span className="font-semibold text-primary">{inviteInfo.role || "MEMBER"}</span>.
+                <form onSubmit={handleExistingUserSubmit} className="flex flex-col gap-4 text-left">
+                    <p className="text-sm text-on-surface-variant text-center">
+                        You have an existing account for <span className="font-semibold text-on-background">{inviteInfo.email}</span>. Please enter your password to confirm your identity and join <span className="font-semibold text-on-background">{inviteInfo.organizationName}</span> as a <span className="font-semibold text-primary">{inviteInfo.role || "MEMBER"}</span>.
                     </p>
-                    {apiError && <p className="text-sm text-red-500 text-center font-medium animate-in fade-in">{apiError}</p>}
+
+                    <div className="space-y-1">
+                        <Label htmlFor="existingPassword" className="text-zinc-600 dark:text-zinc-300 ml-1">Password</Label>
+                        <PasswordInput
+                            id="existingPassword"
+                            placeholder="Enter your account password"
+                            value={existingPassword}
+                            onChange={(e) => {
+                                setExistingPassword(e.target.value);
+                                if (existingPasswordError) setExistingPasswordError("");
+                            }}
+                            className={clsx(
+                                "h-11 md:h-10 px-3 text-[13px] leading-[16px] bg-white/50 focus:bg-white transition-colors border-white/40 shadow-sm rounded",
+                                existingPasswordError && "border-red-500 focus-visible:ring-red-500"
+                            )}
+                        />
+                        {existingPasswordError && (
+                            <p className="text-xs text-red-500 mt-1 ml-1">{existingPasswordError}</p>
+                        )}
+                    </div>
+
+                    {apiError && (
+                        <p className="text-sm text-red-500 text-center font-medium animate-in fade-in">
+                            {apiError}
+                        </p>
+                    )}
+
                     <Button
+                        type="submit"
                         disabled={isLoading}
-                        onClick={() => handleAcceptInvite(token)}
-                        className="w-full h-11 md:h-10 text-[13px] leading-[16px] font-semibold shadow-md transition-all text-white rounded flex items-center justify-center gap-2 bg-[#1877F2] hover:opacity-90 cursor-pointer"
+                        className="w-full h-11 md:h-10 text-[13px] leading-[16px] font-semibold shadow-md transition-all text-white rounded flex items-center justify-center gap-2 bg-[#1877F2] hover:opacity-90 cursor-pointer mt-1"
                     >
                         {isLoading ? (
-                            <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Joining...</>
+                            <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Verifying & Joining...</>
                         ) : (
-                            <><LogIn className="mr-2 h-5 w-5" /> Accept Invitation & Join</>
+                            <><LogIn className="mr-2 h-5 w-5" /> Confirm Password & Join</>
                         )}
                     </Button>
-                </div>
+                </form>
             ) : (
                 <form onSubmit={form.handleSubmit(onSubmit)} className="w-full flex flex-col gap-4 text-left">
                     {apiError && <p className="text-sm text-red-500 text-center font-medium animate-in fade-in">{apiError}</p>}

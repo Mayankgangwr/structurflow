@@ -73,8 +73,13 @@ const DocumentsWorkspace: React.FC = () => {
     useEffect(() => {
         const s = searchParams?.get("status");
         const p = searchParams?.get("projectId");
+        const q = searchParams?.get("search");
         if (s && s !== statusFilter) setStatusFilter(s);
         if (p && p !== selectedProjectId) setSelectedProjectId(p);
+        if (q !== null && q !== searchQuery) {
+            setSearchQuery(q);
+            setDebouncedSearchQuery(q);
+        }
     }, [searchParams]);
 
     // Debounce search query by 300ms before querying backend
@@ -338,10 +343,10 @@ const DocumentsWorkspace: React.FC = () => {
     return (
         <div className="p-2 xs:px-4 xs:py-4 flex-1 flex flex-col gap-1 sm:gap-2 max-w-360 mx-auto w-full">
             {/* Page Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
+            <div className="flex flex-col gap-1 mb-2">
+                <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2.5 flex-wrap">
-                        <h1 className="font-headline-md text-2xl font-bold text-slate-900 tracking-tight">
+                        <h1 className="font-headline-md text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
                             Documents Workspace
                         </h1>
                         {totalDocuments > 0 && (
@@ -350,19 +355,19 @@ const DocumentsWorkspace: React.FC = () => {
                             </span>
                         )}
                     </div>
-                    <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                        Centralized repository for all extracted, transformed, and verified documents across your organization.
-                    </p>
+                    {can("upload_documents") && (
+                        <Button
+                            onClick={() => setIsUploadFormOpen(true)}
+                            className="bg-primary text-white! hover:text-white! font-label-sm sm:font-label-md hover:bg-primary-container transition-colors shrink-0 py-2 px-4 text-label-sm sm:text-label-md cursor-pointer self-start sm:self-auto"
+                        >
+                            <Upload className="w-4 h-4 mr-1.5" /> Add Documents
+                        </Button>
+                    )}
                 </div>
 
-                {can("upload_documents") && (
-                    <Button
-                        onClick={() => setIsUploadFormOpen(true)}
-                        className="bg-primary text-white! hover:text-white! font-label-md hover:bg-primary-container transition-colors shrink-0 py-2 px-4 text-label-md cursor-pointer self-start sm:self-auto"
-                    >
-                        <Upload className="w-4 h-4 mr-1.5" /> Add Documents
-                    </Button>
-                )}
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                    Centralized repository for all extracted, transformed, and verified documents across your organization.
+                </p>
             </div>
 
             {/* Top KPI Metric Cards */}

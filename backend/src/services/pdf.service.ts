@@ -6,6 +6,7 @@ import os from "os";
 import crypto from "crypto";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { gemini } from "@/config/gemini";
+import { logger } from "@/utils/logger";
 import generatePdfFromTemplate, { PdfTextElement, GeneratePdfOptions } from "@/utils/generatePdfFromTemplate";
 
 const execFileAsync = promisify(execFile);
@@ -128,6 +129,68 @@ class PdfService {
         } catch (error: any) {
             throw new Error(`Failed to extract text from PDF: ${error.message}`);
         }
+    }
+
+    /**
+     * Extracts text from an image document (JPEG, PNG, WEBP) using Gemini multimodal vision.
+     * @param imageSource Raw buffer or URL string
+     * @param mimeType Image MIME format (image/png, image/jpeg, etc.)
+     * @returns Extracted clean text string
+     */
+    async extractTextFromImage(imageSource: string | Buffer, mimeType: string = "image/jpeg"): Promise<string> {
+        try {
+            let buffer: Buffer;
+            if (Buffer.isBuffer(imageSource)) {
+                buffer = imageSource;
+            } else if (imageSource.startsWith("http://") || imageSource.startsWith("https://")) {
+                const res = await fetch(imageSource);
+                if (!res.ok) throw new Error(`HTTP error ${res.status}: ${res.statusText}`);
+                const arrayBuffer = await res.arrayBuffer();
+                buffer = Buffer.from(arrayBuffer);
+            } else {
+                buffer = await fs.readFile(imageSource);
+            }
+
+            const response = await gemini.models.generateContent({
+                model: "gemini-2.5-flash",
+                contents: [
+                    {
+                        role: "user",
+                        parts: [
+                            {
+                                inlineData: {
+                                    mimeType,
+                                    data: buffer.toString("base64"),
+                                },
+                            },
+                            {
+                                text: "Extract and transcribe all text from this document image cleanly and accurately, preserving line breaks and structural layout where possible. Return ONLY the extracted text content.",
+                            },
+                        ],
+                    },
+                ],
+            });
+
+            return response.text?.trim() || "";
+        } catch (error: any) {
+            logger.warn(`Failed to extract text from image via Gemini: ${error.message}`);
+            return "";
+        }
+    }
+
+    /**
+     * Extracts text from either a PDF or Image document depending on MIME type.
+     */
+    async extractTextFromDocument(fileSource: string | Buffer, mimeType: string): Promise<string> {
+        if (mimeType === "application/pdf") {
+            return await this.extractTextFromPdf(fileSource);
+        } else if (mimeType.startsWith("image/")) {
+            return await this.extractTextFromImage(fileSource, mimeType);
+        } else if (mimeType === "text/plain" || mimeType.includes("text")) {
+            if (Buffer.isBuffer(fileSource)) return fileSource.toString("utf-8");
+            return String(fileSource);
+        }
+        return "";
     }
 
     async processPdfWithSchema(extractedData: string | Record<string, any>[], schema: object) {

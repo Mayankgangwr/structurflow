@@ -119,7 +119,7 @@ const ProjectItems: React.FC<IProjectItems> = () => {
             id: "name",
             header: "Project",
             cell: (project) => (
-                <div className="flex items-center gap-3 cursor-pointer hover:bg-surface-container-low p-1" onClick={() => router.push(`/project/${project.id}`)}>
+                <div className="flex items-center gap-3 cursor-pointer hover:bg-surface-container-low p-1" onClick={() => router.push(`/project/${project.id || (project as any)._id}`)}>
                     <div
                         className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
                         <Folder className="w-4 h-4" />
@@ -302,7 +302,8 @@ const ProjectItems: React.FC<IProjectItems> = () => {
                         <DataTable
                             data={projects}
                             columns={projectColumns}
-                            getRowId={(project: Project) => project.id}
+                            getRowId={(project: Project) => project.id || (project as any)._id}
+                            onRowClick={(project: Project) => router.push(`/project/${project.id || (project as any)._id}`)}
                             isLoading={isFetching}
                             emptyMessage={
                                 searchQuery || statusFilter !== "ALL"

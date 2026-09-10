@@ -25,8 +25,31 @@ class TemplateRepository extends BaseRepository<ITemplate> {
     }
 
     async activeTemplateByProject(projectId: string, organizationId: string) {
-        const activeTemplate = await this.model.findOne({ projectId, organizationId, isDeleted: { $ne: true }, isActive: true });
+        const activeTemplate = await this.model
+            .findOne({
+                projectId: new mongoose.Types.ObjectId(projectId),
+                organizationId: new mongoose.Types.ObjectId(organizationId),
+                isDeleted: { $ne: true },
+                isActive: true,
+            })
+            .sort({ createdAt: -1 });
         return activeTemplate;
+    }
+
+    async deactivateOtherTemplatesInProject(
+        projectId: string | mongoose.Types.ObjectId,
+        organizationId: string | mongoose.Types.ObjectId,
+        excludeTemplateId: string | mongoose.Types.ObjectId
+    ) {
+        return await this.model.updateMany(
+            {
+                projectId: new mongoose.Types.ObjectId(projectId.toString()),
+                organizationId: new mongoose.Types.ObjectId(organizationId.toString()),
+                _id: { $ne: new mongoose.Types.ObjectId(excludeTemplateId.toString()) },
+                isActive: true,
+            },
+            { $set: { isActive: false } }
+        );
     }
 
     async templateDetails(id: string, organizationId: string) {
