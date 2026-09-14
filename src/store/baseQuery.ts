@@ -1,0 +1,45 @@
+import { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
+import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+
+import { RootState } from '@/store';
+
+const baseQuery = fetchBaseQuery({
+    baseUrl: process.env.NEXT_PUBLIC_API_URL || "/api",
+    // credentials: 'include' is critical to send the secure cookies automatically
+    credentials: 'include',
+    prepareHeaders: (headers, { getState }) => {
+        const state = getState() as RootState;
+        const orgId = state.auth.activeOrganizationId;
+        if (orgId) {
+            headers.set('X-Organization-Id', orgId);
+        }
+        return headers;
+    },
+});
+
+export const baseQueryWithReAuth: BaseQueryFn<
+    string | FetchArgs,
+    unknown,
+    FetchBaseQueryError
+> = async (args, api, extraOptions) => {
+    let result = await baseQuery(args, api, extraOptions);
+
+    if (result.error && result.error.status === 401) {
+        // Access token has expired, try to get a new one
+        const refreshResult = await baseQuery(
+            { url: '/auth/refresh', method: 'POST' },
+            api,
+            extraOptions
+        );
+        if (refreshResult.data) {
+            // Refresh was successful. Retry the original query.
+            result = await baseQuery(args, api, extraOptions);
+        } else {
+            // Refresh failed (refresh token expired/missing). Force logout.
+            await baseQuery({ url: '/auth/logout', method: 'POST' }, api, extraOptions);
+            api.dispatch({ type: 'auth/logoutUser' });
+            window.location.href = '/login';
+        }
+    }
+    return result;
+}
