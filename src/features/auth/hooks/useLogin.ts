@@ -56,7 +56,7 @@ export const useLogin = () => {
                     setApiError(result.error.message || "Login failed");
                 }
             } else {
-                window.location.href = "/dashboard";
+                router.push("/dashboard");
             }
         } catch (error) {
             if (error instanceof Error) {
