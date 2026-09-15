@@ -76,7 +76,7 @@ export const useVerifyOTP = (defaultOtp: string = "") => {
                 }
 
                 setTimeout(() => {
-                    window.location.href = "/dashboard";
+                    router.push("/dashboard");
                 }, 1500);
             }
         } catch (error) {
