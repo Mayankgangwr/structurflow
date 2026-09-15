@@ -6,8 +6,10 @@ const authPaths = ['/login', '/register', '/forgot-password', '/reset-password']
 export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
-    // Better-Auth uses "better-auth.session_token" as the cookie name
-    const hasSession = request.cookies.has('better-auth.session_token');
+    // Better-Auth uses "better-auth.session_token" locally and "__Secure-better-auth.session_token" on HTTPS
+    const hasSession =
+        request.cookies.has('better-auth.session_token') ||
+        request.cookies.has('__Secure-better-auth.session_token');
 
     const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path));
     if (isProtectedPath && !hasSession) {
