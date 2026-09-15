@@ -43,3 +43,68 @@ export async function sendOtpEmail({ to, otp, type }: SendOtpEmailParams) {
         return { success: false, error: error?.message || "Failed to send email" };
     }
 }
+
+async function sendEmail({ to, subject, text, html }: { to: string; subject: string; text: string; html: string }) {
+    const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || "iammayankgangwarbly@gmail.com";
+    return transporter.sendMail({ from: `"StructurFlow" <${fromAddress}>`, to, subject, text, html });
+}
+
+export async function sendResetPasswordEmail({ to, token }: { to: string; token: string }) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const resetLink = `${appUrl}/reset-password?token=${encodeURIComponent(token)}`;
+    await sendEmail({
+        to,
+        subject: "Reset your Structurflow password",
+        text: `Reset your password: ${resetLink}. This link expires in one hour.`,
+        html: `<p>Reset your Structurflow password by clicking <a href="${resetLink}" target="_blank" rel="noopener noreferrer">this secure link</a>.</p><p>If the link is not clickable, copy and paste this URL into your browser:</p><p style="word-break: break-all;"><a href="${resetLink}" target="_blank" rel="noopener noreferrer">${resetLink}</a></p><p>This link expires in one hour.</p>`,
+    });
+}
+
+export async function sendTeamInviteEmail({ to, inviterName, orgName, token }: { to: string; inviterName: string; orgName: string; token: string }) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const inviteLink = `${appUrl}/accept-invite?token=${encodeURIComponent(token)}`;
+    const subject = `You've been invited to join ${orgName} on StructurFlow`;
+
+    const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; padding: 20px; border: 1px solid #eaeaea; border-radius: 12px;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h1 style="color: #4f46e5; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -1px;">StructurFlow</h1>
+      </div>
+      <h2 style="color: #111827; font-size: 20px; font-weight: 600; text-align: center;">You're Invited!</h2>
+      <p style="color: #4b5563; font-size: 16px; line-height: 24px; text-align: center;"><strong>${inviterName}</strong> has invited you to join the team at <strong>${orgName}</strong>.</p>
+      
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${inviteLink}" style="background-color: #4f46e5; color: #ffffff; padding: 14px 28px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; display: inline-block;">Accept Invitation</a>
+      </div>
+
+      <p style="color: #6b7280; font-size: 14px; text-align: center;">Or copy and paste this link into your browser:</p>
+      <p style="color: #4f46e5; font-size: 14px; text-align: center; word-break: break-all;"><a href="${inviteLink}" style="color: #4f46e5;">${inviteLink}</a></p>
+      
+      <p style="color: #6b7280; font-size: 14px; text-align: center; margin-top: 24px;">This invitation link will expire in <strong>3 days</strong>.</p>
+      
+      <hr style="border: none; border-top: 1px solid #eaeaea; margin: 32px 0;">
+      <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 0;">StructurFlow - Intelligent Document Processing</p>
+    </div>
+    `;
+
+    const text = `
+    You're Invited!
+
+    ${inviterName} has invited you to join the team at ${orgName} on StructurFlow.
+
+    To accept the invitation, please open the following link in your browser:
+    ${inviteLink}
+
+    This invitation link will expire in 3 days.
+
+    StructurFlow - Intelligent Document Processing
+    `;
+
+    try {
+        await sendEmail({ to, subject, text, html });
+        return { success: true };
+    } catch (err: any) {
+        console.error(`[SMTP ERROR] Failed to send team invite email to ${to}:`, err?.message || err);
+        return { success: false, error: err?.message || "Failed to send email" };
+    }
+}

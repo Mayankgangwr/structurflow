@@ -1,45 +1,39 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { organization } from "@/schema";
+import { copyAuthCookies, errorJson, getMemberships, json, toPublicUser } from "@/lib/auth-route";
+import { generateSlug } from "@/lib/generate";
 
-export async function POST(req: NextRequest) {
+const bodySchema = z.object({ email: z.string().email(), otp: z.string().regex(/^\d{6}$/), organizationName: z.string().trim().min(2).optional() });
+
+export async function POST(request: NextRequest) {
     try {
-        const body = await req.json();
-        const { email, otp, organizationName } = body;
+        const body = bodySchema.parse(await request.json());
+        const response = await auth.api.verifyEmailOTP({ headers: request.headers, body: { email: body.email.toLowerCase(), otp: body.otp }, asResponse: true }) as Response;
+        if (!response.ok) return errorJson("Invalid or expired verification code", 400, "INVALID_OTP");
+        const result = await response.json() as { user: Parameters<typeof toPublicUser>[0] };
+        const memberships = await getMemberships(result.user.id);
+        let selectedOrganization = memberships[0];
 
-        if (!email || !otp) {
-            return NextResponse.json(
-                { success: false, message: "Email and OTP code are required" },
-                { status: 400 }
-            );
+        // The auth hook creates the default workspace. Rename it atomically from this compatibility endpoint when requested.
+        if (body.organizationName && selectedOrganization) {
+            const baseSlug = generateSlug(body.organizationName);
+            const slug = `${baseSlug}-${crypto.randomUUID().slice(0, 6)}`;
+            const updated = await db.update(organization).set({ name: body.organizationName, slug }).where(eq(organization.id, selectedOrganization.organizationId)).returning();
+            if (updated[0]) selectedOrganization = { ...selectedOrganization, organizationName: updated[0].name };
         }
 
-        const result = await auth.api.verifyEmailOTP({
-            body: {
-                email: email.trim().toLowerCase(),
-                otp: String(otp).trim(),
-            },
-            headers: req.headers,
-        });
-
-        return NextResponse.json({
-            success: true,
-            message: "Email verified successfully",
-            data: result,
-        });
-    } catch (error: any) {
-        console.error("[verify-otp error]:", error?.message || error);
-        const statusCode = typeof error?.statusCode === "number"
-            ? error.statusCode
-            : typeof error?.status === "number"
-                ? error.status
-                : 400;
-
-        return NextResponse.json(
-            {
-                success: false,
-                message: error?.body?.message || error?.message || "Invalid or expired OTP code",
-            },
-            { status: statusCode }
-        );
+        return copyAuthCookies(response, json({
+            user: toPublicUser(result.user),
+            organization: selectedOrganization ? { id: selectedOrganization.organizationId, name: selectedOrganization.organizationName } : undefined,
+            memberships: memberships.map(({ organizationName: _name, ...membership }) => membership),
+        }, "Email verified successfully"));
+    } catch (error) {
+        if (error instanceof z.ZodError) return errorJson("Invalid verification data");
+        console.error("[POST /api/auth/verify-otp]", error);
+        return errorJson("Invalid or expired verification code", 400, "INVALID_OTP");
     }
 }

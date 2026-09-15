@@ -1,45 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { errorJson, json } from "@/lib/auth-route";
 
-export async function POST(req: NextRequest) {
+const bodySchema = z.object({ email: z.string().email(), type: z.enum(["email-verification", "sign-in", "forget-password"]).optional() });
+const resendAttempts = new Map<string, number>();
+const RESEND_COOLDOWN_MS = 60_000;
+
+export async function POST(request: NextRequest) {
     try {
-        const body = await req.json();
-        const { email, type = "email-verification" } = body;
-
-        if (!email) {
-            return NextResponse.json(
-                { success: false, message: "Email is required" },
-                { status: 400 }
-            );
-        }
-
-        const result = await auth.api.sendVerificationOTP({
-            body: {
-                email: email.trim().toLowerCase(),
-                type,
-            },
-            headers: req.headers,
-        });
-
-        return NextResponse.json({
-            success: true,
-            message: "Verification OTP resent successfully",
-            data: result,
-        });
-    } catch (error: any) {
-        console.error("[resend-otp error]:", error?.message || error);
-        const statusCode = typeof error?.statusCode === "number"
-            ? error.statusCode
-            : typeof error?.status === "number"
-                ? error.status
-                : 500;
-
-        return NextResponse.json(
-            {
-                success: false,
-                message: error?.body?.message || error?.message || "Failed to resend verification OTP",
-            },
-            { status: statusCode }
-        );
+        const body = bodySchema.parse(await request.json());
+        const email = body.email.toLowerCase();
+        const lastAttempt = resendAttempts.get(email) ?? 0;
+        if (Date.now() - lastAttempt < RESEND_COOLDOWN_MS) return errorJson("Please wait one minute before requesting another code.", 429, "OTP_RESEND_RATE_LIMITED");
+        await auth.api.sendVerificationOTP({ headers: request.headers, body: { email, type: body.type ?? "email-verification" } });
+        resendAttempts.set(email, Date.now());
+        return json({ email, expiresIn: 5 }, "OTP resent successfully");
+    } catch (error) {
+        if (error instanceof z.ZodError) return errorJson("A valid email address is required");
+        console.error("[POST /api/auth/resend-otp]", error);
+        return errorJson("Unable to resend verification code", 400, "OTP_RESEND_FAILED");
     }
 }

@@ -15,6 +15,13 @@
       "when": 1789117482934,
       "tag": "0001_moaning_abomination",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789377376325,
+      "tag": "0002_yellow_khan",
+      "breakpoints": true
     }
   ]
 }

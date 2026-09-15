@@ -42,8 +42,7 @@ const Topbar: React.FC = () => {
 
     const { can } = usePermissions();
     const { data: session } = authClient.useSession();
-    const reduxUser = useAppSelector((state) => state.auth.user);
-    const user = (session?.user as any) || reduxUser;
+    const user = session?.user as any;
     const { data: activityData, isLoading: isActivityLoading } = useGetActivitiesQuery({ limit: 5 });
 
     const activities = activityData?.data?.activities || [];
@@ -287,8 +286,8 @@ const Topbar: React.FC = () => {
             {/* Desktop/Tablet Topbar - visible at ≥450px */}
             <header className="hidden xs:flex justify-between items-center h-13 px-4 w-full bg-surface sticky top-0 z-30 shrink-0 border-b border-border-subtle/40">
                 <div className="flex-1 min-w-0 mr-4">
-                    <h2 className="font-headline-md text-base font-bold text-text-primary truncate">{title}</h2>
-                    <p className="text-label-sm font-label-sm text-secondary truncate">{description}</p>
+                    <h2 suppressHydrationWarning className="font-headline-md text-base font-bold text-text-primary truncate">{title}</h2>
+                    <p suppressHydrationWarning className="text-label-sm font-label-sm text-secondary truncate">{description}</p>
                 </div>
                 <div className="flex items-center gap-3 sm:gap-4">
                     {/* Omnisearch Bar - responsive across tablet and desktop */}

@@ -1,6 +1,9 @@
 "use client";
 
+import { authClient } from "@/lib/auth-client";
 import { useAppSelector } from "@/store/hooks";
+
+export type RoleType = "OWNER" | "ADMIN" | "REVIEWER" | "VIEWER";
 
 export type AppPermission =
     | "manage_organization"
@@ -11,13 +14,15 @@ export type AppPermission =
     | "manage_templates"
     | "upload_documents"
     | "delete_documents"
+    | "view_analytics"
+    | "manage_members"
+    | "manage_settings"
+    | "modify_transformed_documents"
     | "verify_documents"
     | "export_documents"
     | "view_reports";
 
-export type RoleType = "OWNER" | "ADMIN" | "REVIEWER" | "VIEWER";
-
-const ROLE_PERMISSIONS: Record<RoleType, AppPermission[]> = {
+export const ROLE_PERMISSIONS: Record<RoleType, AppPermission[]> = {
     OWNER: [
         "manage_organization",
         "manage_team",
@@ -27,6 +32,10 @@ const ROLE_PERMISSIONS: Record<RoleType, AppPermission[]> = {
         "manage_templates",
         "upload_documents",
         "delete_documents",
+        "view_analytics",
+        "manage_members",
+        "manage_settings",
+        "modify_transformed_documents",
         "verify_documents",
         "export_documents",
         "view_reports",
@@ -39,11 +48,16 @@ const ROLE_PERMISSIONS: Record<RoleType, AppPermission[]> = {
         "manage_templates",
         "upload_documents",
         "delete_documents",
+        "view_analytics",
+        "manage_members",
+        "modify_transformed_documents",
         "verify_documents",
         "export_documents",
         "view_reports",
     ],
     REVIEWER: [
+        // "upload_documents",
+        "modify_transformed_documents",
         "verify_documents",
         "export_documents",
         "view_reports",
@@ -55,21 +69,33 @@ const ROLE_PERMISSIONS: Record<RoleType, AppPermission[]> = {
 };
 
 export function usePermissions() {
-    const { user, memberships, activeOrganizationId, isAuthenticated } = useAppSelector(
-        (state) => state.auth
-    );
+    const { data: session } = authClient.useSession();
+    const { data: activeOrg } = authClient.useActiveOrganization();
+    const { data: activeMember } = authClient.useActiveMember();
+    const reduxAuth = useAppSelector((state) => state.auth);
 
-    // Find active membership matching current organization
-    const activeMembership = (memberships || []).find(
-        (m: any) =>
-            m.organizationId === activeOrganizationId ||
-            m.organizationId?._id === activeOrganizationId ||
-            (typeof m.organizationId === "object" && m.organizationId?.id === activeOrganizationId)
-    );
+    const user = (session?.user as any) || reduxAuth.user;
+    const isAuthenticated = !!user;
 
-    // Fallback: If user is authenticated and is the sole org creator or no role found, default to OWNER if matching
-    const rawRole = (activeMembership?.role || (memberships && memberships[0]?.role) || "VIEWER") as RoleType;
-    const role: RoleType = (["OWNER", "ADMIN", "REVIEWER", "VIEWER"].includes(rawRole) ? rawRole : "VIEWER");
+    const activeOrganizationId =
+        activeOrg?.id ||
+        (session?.session as any)?.activeOrganizationId ||
+        activeMember?.organizationId ||
+        reduxAuth.activeOrganizationId ||
+        null;
+
+    // Resolve role from activeMember (Better-Auth returns lowercase "owner", "admin", "member")
+    const rawRole = (
+        activeMember?.role ||
+        (reduxAuth.memberships && reduxAuth.memberships[0]?.role) ||
+        "VIEWER"
+    ).toUpperCase() as RoleType;
+
+    const role: RoleType = (["OWNER", "ADMIN", "REVIEWER", "VIEWER"].includes(rawRole)
+        ? rawRole
+        : rawRole === "MEMBER" as any
+        ? "REVIEWER"
+        : "VIEWER");
 
     const isOwner = role === "OWNER";
     const isAdmin = role === "ADMIN";

@@ -8,7 +8,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCreateProjectMutation, useUpdateProjectMutation, Project } from "../projectApi";
-import { useSelector } from "react-redux";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 const projectSchema = z.object({
@@ -25,8 +24,7 @@ export interface ProjectFormProps {
 }
 
 const ProjectForm: React.FC<ProjectFormProps> = ({ isOpen, onClose, project }) => {
-    const orgId = useSelector((state: any) => state.auth.activeOrganizationId);
-    const { can } = usePermissions();
+    const { can, activeOrganizationId: orgId } = usePermissions();
 
     const [createProject, { isLoading: isCreating }] = useCreateProjectMutation();
     const [updateProject, { isLoading: isUpdating }] = useUpdateProjectMutation();

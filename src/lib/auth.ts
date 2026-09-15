@@ -16,6 +16,10 @@ export const auth = betterAuth({
         enabled: true,
         requireEmailVerification: true,
         autoSignIn: false,
+        sendResetPassword: async ({ user, token }) => {
+            const { sendResetPasswordEmail } = await import("./email");
+            await sendResetPasswordEmail({ to: user.email, token });
+        },
     },
     emailVerification: {
         autoSignInAfterVerification: true,

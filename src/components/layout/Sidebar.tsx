@@ -48,9 +48,8 @@ const Sidebar: React.FC<SidebarProps> = () => {
     const { data: session } = authClient.useSession();
     const { data: activeOrg } = authClient.useActiveOrganization();
     const { data: activeMember } = authClient.useActiveMember();
-    const reduxUser = useAppSelector((state) => state.auth.user);
 
-    const user = (session?.user as any) || reduxUser;
+    const user = session?.user as any;
     const { data: projectsData } = useGetProjectsQuery();
 
     const handleLogout = async () => {
@@ -124,7 +123,7 @@ const Sidebar: React.FC<SidebarProps> = () => {
             ? `${user.firstName[0]}${user.lastName ? user.lastName[0] : ''}`.toUpperCase()
             : "S";
 
-    const displayRole = (activeMember?.role || role || "").toUpperCase();
+    const displayRole: any = (activeMember?.role || role || "").toUpperCase();
 
     return (
         <div className={`hidden xs:flex h-screen bg-surface ${isCollapsed ? 'p-1.5' : "px-2.5 py-1.5"} flex-col sticky top-0 transition-all duration-300 z-40 shrink-0 ${isCollapsed ? "w-14" : "w-[20%] max-w-56 min-w-48"}`}>
@@ -139,7 +138,7 @@ const Sidebar: React.FC<SidebarProps> = () => {
                         <h1 className="font-headline-md text-base font-bold leading-tight text-primary truncate">
                             StructurFlow
                         </h1>
-                        <p className="font-label-sm text-[11px] leading-tight text-secondary truncate">
+                        <p suppressHydrationWarning className="font-label-sm text-[11px] leading-tight text-secondary truncate">
                             {activeOrg?.name || "Enterprise Workspace"}
                         </p>
                     </div>
@@ -283,11 +282,11 @@ const Sidebar: React.FC<SidebarProps> = () => {
                         {!isCollapsed && (
                             <div className="min-w-0 flex-1">
                                 <div className="flex items-center justify-between gap-1">
-                                    <p className="truncate font-label-md text-xs font-semibold text-text-primary group-hover/user:text-primary transition-colors">
+                                    <p suppressHydrationWarning className="truncate font-label-md text-xs font-semibold text-text-primary group-hover/user:text-primary transition-colors">
                                         {fullName}
                                     </p>
                                     {displayRole && (
-                                        <span className={cn(
+                                        <span suppressHydrationWarning className={cn(
                                             "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded border shrink-0",
                                             displayRole === "OWNER" && "bg-amber-50 text-amber-700 border-amber-200",
                                             displayRole === "ADMIN" && "bg-blue-50 text-blue-700 border-blue-200",
@@ -399,6 +398,7 @@ const NavItem: React.FC<NavItemProps> = ({
     return (
         <Link
             href={path}
+            suppressHydrationWarning
             title={isCollapsed ? label : undefined}
             className={`group w-full flex items-center rounded-md font-label-md text-label-md transition-colors duration-200 relative ${isCollapsed ? "justify-center px-0 py-2" : "gap-3 px-2 py-1.5"} ${isActive ? "bg-surface-container-low text-primary font-bold" : "text-secondary hover:bg-surface-container-low hover:text-primary"}`}
         >
@@ -413,11 +413,10 @@ const NavItem: React.FC<NavItemProps> = ({
                 <>
                     <span className="truncate flex-1">{label}</span>
                     {badge !== undefined && (
-                        <span className={`ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-full transition-colors ${
-                            badgeVariant === 'warning'
+                        <span className={`ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-full transition-colors ${badgeVariant === 'warning'
                                 ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20'
                                 : 'bg-primary/10 text-primary border border-primary/20'
-                        }`}>
+                            }`}>
                             {badge}
                         </span>
                     )}

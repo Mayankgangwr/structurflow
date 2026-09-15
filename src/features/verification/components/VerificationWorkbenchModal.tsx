@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Document, useGetDocumentPreviewQuery, useGetDocumentByIdQuery, useProcessDocumentMutation } from "@/features/documents/documentApi";
+import {
+    Document,
+    useGetDocumentPreviewQuery,
+    useGetDocumentByIdQuery,
+    useProcessDocumentMutation,
+    useUpdateDocumentAIGeneratedJSONMutation
+} from "@/features/documents/documentApi";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import PdfViewer from "@/components/ui/pdf-viewer";
@@ -58,6 +64,7 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
 }) => {
     const { can } = usePermissions();
     const canVerify = can("verify_documents");
+    const canModifyValues = can("modify_transformed_documents");
     const [activeTab, setActiveTab] = useState<"fields" | "preview" | "json">("fields");
     const [fieldSearch, setFieldSearch] = useState("");
     const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -65,6 +72,7 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
     const [rejectionReason, setRejectionReason] = useState("");
 
     const [processDocumentMutation, { isLoading: isReprocessing }] = useProcessDocumentMutation();
+    const [updateDocumentAIGeneratedJSONMutation, { isLoading: isAIGeneratedJSONUpdating }] = useUpdateDocumentAIGeneratedJSONMutation();
 
     // Query full document details (includes audit trail)
     const { data: docDetailsRes } = useGetDocumentByIdQuery(document?._id || "", {
@@ -122,7 +130,7 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
         setEditedValues(initial);
     }, [document?._id, rawAiData]);
 
-    // Check if an individual field has been modified by the user
+    // Check if an individual field has been modified by the user (pure function, no side effects)
     const isFieldModified = (key: string) => {
         const original = extractedFields.find((f) => f.key === key)?.value ?? "";
         return (editedValues[key] ?? "") !== original;
@@ -134,6 +142,17 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
     }, [editedValues, extractedFields]);
 
     const hasModifications = modifiedKeys.length > 0;
+
+    // Derived updates mapping of modified fields only
+    const updates = React.useMemo(() => {
+        const result: Record<string, string> = {};
+        for (const key of modifiedKeys) {
+            if (editedValues[key] !== undefined) {
+                result[key] = editedValues[key];
+            }
+        }
+        return result;
+    }, [modifiedKeys, editedValues]);
 
     const handleValueChange = (key: string, val: string) => {
         setEditedValues((prev) => ({
@@ -208,6 +227,21 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
             await onApprove(document._id, liveJsonData);
         } else {
             await onApprove(document._id);
+        }
+    };
+
+    const handleUpdateJSON = async () => {
+        if (!document) return;
+        try {
+            console.log(updates, "updates")
+            await updateDocumentAIGeneratedJSONMutation({
+                documentId: document._id,
+                updates,
+            }).unwrap();
+            toast.success("Document AI generated JSON updated successfully");
+        } catch (err: any) {
+            console.error("Update AI JSON error:", err);
+            toast.error(err?.data?.message || err?.message || "Failed to update document data");
         }
     };
 
@@ -642,11 +676,35 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                             Close
                         </Button>
 
-                        {/* APPROVE & NEXT Primary Action (gated for operators) */}
+                        {/* Save AI JSON Changes (gated for users with modify permission when modifications exist) */}
+                        {canModifyValues && hasModifications && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={isAIGeneratedJSONUpdating || isApproving}
+                                onClick={handleUpdateJSON}
+                                className="text-amber-700 border-amber-300 hover:bg-amber-50 text-xs font-semibold h-9 px-3.5 cursor-pointer flex items-center gap-1.5 transition-all"
+                                title="Save modified JSON values without signing off"
+                            >
+                                {isAIGeneratedJSONUpdating ? (
+                                    <>
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        <span>Saving...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                                        <span>Save Changes</span>
+                                    </>
+                                )}
+                            </Button>
+                        )}
+
+                        {/* APPROVE & NEXT Primary Action (gated for operators with verify permission) */}
                         {canVerify && (
                             <Button
                                 size="sm"
-                                disabled={isApproving || isRejecting}
+                                disabled={isApproving || isRejecting || isAIGeneratedJSONUpdating}
                                 onClick={handleApproveAndNext}
                                 className={cn(
                                     "text-white text-xs font-semibold h-9 px-4 rounded-lg shadow-sm cursor-pointer flex items-center gap-1.5 transition-all",
@@ -669,8 +727,8 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                                                     ? "Approve with Corrections & Next"
                                                     : "Approve with Corrections & Finish"
                                                 : currentIndex < totalInQueue - 1
-                                                ? "Approve & Next"
-                                                : "Approve & Finish"}
+                                                    ? "Approve & Next"
+                                                    : "Approve & Finish"}
                                         </span>
                                     </>
                                 )}

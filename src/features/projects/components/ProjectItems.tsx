@@ -28,7 +28,7 @@ export interface IProjectItems {
 
 const ProjectItems: React.FC<IProjectItems> = () => {
     const router = useRouter();
-    const { can } = usePermissions();
+    const { can, activeOrganizationId } = usePermissions();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [searchQuery, setSearchQuery] = useState("");
@@ -41,7 +41,6 @@ const ProjectItems: React.FC<IProjectItems> = () => {
     const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
     const [isDeleteDialogVisible, setIsDeleteDialogVisible] = useState(false);
     const [currentProject, setCurrentProject] = useState<Project | null>(null);
-    const { activeOrganizationId } = useSelector((state: RootState) => state.auth);
 
     // Default to grid view on mobile devices
     useEffect(() => {

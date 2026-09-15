@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { project } from "@/schema";
 import { getAuthenticatedUserAndOrg } from "@/lib/session";
-import { and, eq } from "drizzle-orm";
+import { projectService } from "@/lib/services/project.service";
+import { updateProjectSchema } from "@/lib/validations/project";
+import { z } from "zod";
 
 interface RouteParams {
     params: Promise<{
@@ -10,148 +10,124 @@ interface RouteParams {
     }>;
 }
 
+const canManageProjects = (role: string) => ["OWNER", "ADMIN"].includes(role.toUpperCase());
+
+const requestMetadata = (request: NextRequest) => ({
+    ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+    userAgent: request.headers.get("user-agent"),
+});
+
 export async function GET(req: NextRequest, { params }: RouteParams) {
     try {
         const { organizationId } = await getAuthenticatedUserAndOrg(req);
         const { projectId } = await params;
 
-        const found = await db
-            .select()
-            .from(project)
-            .where(and(eq(project.id, projectId), eq(project.organizationId, organizationId)))
-            .limit(1);
+        const found = await projectService.getProjectById(projectId, organizationId);
 
-        if (found.length === 0) {
+        if (!found) {
             return NextResponse.json({ success: false, message: "Project not found" }, { status: 404 });
         }
 
-        const p = found[0];
-
         return NextResponse.json({
             success: true,
-            data: {
-                id: p.id,
-                name: p.name,
-                description: p.description || "",
-                status: p.status as "Active" | "Inactive",
-                documents: 0,
-                processing: 0,
-                needsVerification: 0,
-                successRate: 100,
-                lastActivity: p.updatedAt ? p.updatedAt.toISOString() : p.createdAt.toISOString(),
-                activeTemplateId: p.templateDocumentId || null,
-                templateData: null,
-            },
+            data: found,
+            message: "Project fetched successfully",
         });
-    } catch (error: any) {
-        if (error?.message === "UNAUTHORIZED") {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "";
+        if (message === "UNAUTHORIZED") {
             return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
         }
-        if (error?.message === "ORGANIZATION_REQUIRED") {
+        if (message === "ORGANIZATION_REQUIRED") {
             return NextResponse.json({ success: false, message: "No active organization found" }, { status: 400 });
         }
         console.error("[GET /api/projects/[projectId] error]:", error);
-        return NextResponse.json({ success: false, message: error?.message || "Failed to fetch project" }, { status: 500 });
+        return NextResponse.json(
+            { success: false, error: { code: "PROJECT_GET_FAILED", message: "Failed to fetch project" } },
+            { status: 500 }
+        );
     }
 }
 
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
     try {
-        const { organizationId } = await getAuthenticatedUserAndOrg(req);
+        const { user, organizationId, membership } = await getAuthenticatedUserAndOrg(req);
+        if (!canManageProjects(membership.role)) {
+            return NextResponse.json(
+                { success: false, error: { code: "FORBIDDEN", message: "Only organization owners and admins can update projects." } },
+                { status: 403 }
+            );
+        }
         const { projectId } = await params;
 
-        const body = await req.json();
-        const { name, description, status } = body;
+        const body = updateProjectSchema.parse(await req.json());
+        const updated = await projectService.updateProject(projectId, organizationId, user.id, body, requestMetadata(req));
 
-        const updates: Partial<{
-            name: string;
-            description: string;
-            status: string;
-            updatedAt: Date;
-        }> = {
-            updatedAt: new Date(),
-        };
-
-        if (name && typeof name === "string" && name.trim().length >= 3) {
-            updates.name = name.trim();
-        }
-
-        if (description !== undefined && typeof description === "string") {
-            updates.description = description.trim();
-        }
-
-        if (status && (status === "Active" || status === "Inactive")) {
-            updates.status = status;
-        }
-
-        const updated = await db
-            .update(project)
-            .set(updates)
-            .where(and(eq(project.id, projectId), eq(project.organizationId, organizationId)))
-            .returning();
-
-        if (updated.length === 0) {
+        if (!updated) {
             return NextResponse.json({ success: false, message: "Project not found or unauthorized" }, { status: 404 });
         }
 
-        const p = updated[0];
-
         return NextResponse.json({
             success: true,
-            data: {
-                id: p.id,
-                name: p.name,
-                description: p.description || "",
-                status: p.status as "Active" | "Inactive",
-                documents: 0,
-                processing: 0,
-                needsVerification: 0,
-                successRate: 100,
-                lastActivity: p.updatedAt.toISOString(),
-                activeTemplateId: p.templateDocumentId || null,
-                templateData: null,
-            },
+            data: updated,
+            message: "Project updated successfully",
         });
-    } catch (error: any) {
-        if (error?.message === "UNAUTHORIZED") {
+    } catch (error: unknown) {
+        if (error instanceof z.ZodError) {
+            return NextResponse.json(
+                { success: false, error: { code: "VALIDATION_ERROR", message: error.issues[0]?.message ?? "Invalid project data" } },
+                { status: 400 }
+            );
+        }
+        const message = error instanceof Error ? error.message : "";
+        if (message === "UNAUTHORIZED") {
             return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
         }
-        if (error?.message === "ORGANIZATION_REQUIRED") {
+        if (message === "ORGANIZATION_REQUIRED") {
             return NextResponse.json({ success: false, message: "No active organization found" }, { status: 400 });
         }
         console.error("[PATCH /api/projects/[projectId] error]:", error);
-        return NextResponse.json({ success: false, message: error?.message || "Failed to update project" }, { status: 500 });
+        return NextResponse.json(
+            { success: false, error: { code: "PROJECT_UPDATE_FAILED", message: "Failed to update project" } },
+            { status: 500 }
+        );
     }
 }
 
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
     try {
-        const { organizationId } = await getAuthenticatedUserAndOrg(req);
+        const { user, organizationId, membership } = await getAuthenticatedUserAndOrg(req);
+        if (!canManageProjects(membership.role)) {
+            return NextResponse.json(
+                { success: false, error: { code: "FORBIDDEN", message: "Only organization owners and admins can delete projects." } },
+                { status: 403 }
+            );
+        }
         const { projectId } = await params;
 
-        const deleted = await db
-            .delete(project)
-            .where(and(eq(project.id, projectId), eq(project.organizationId, organizationId)))
-            .returning();
+        const deleted = await projectService.deleteProject(projectId, organizationId, user.id, requestMetadata(req));
 
-        if (deleted.length === 0) {
+        if (!deleted) {
             return NextResponse.json({ success: false, message: "Project not found or unauthorized" }, { status: 404 });
         }
 
         return NextResponse.json({
             success: true,
-            data: {
-                id: deleted[0].id,
-            },
+            data: deleted,
+            message: "Project deleted successfully",
         });
-    } catch (error: any) {
-        if (error?.message === "UNAUTHORIZED") {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "";
+        if (message === "UNAUTHORIZED") {
             return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
         }
-        if (error?.message === "ORGANIZATION_REQUIRED") {
+        if (message === "ORGANIZATION_REQUIRED") {
             return NextResponse.json({ success: false, message: "No active organization found" }, { status: 400 });
         }
         console.error("[DELETE /api/projects/[projectId] error]:", error);
-        return NextResponse.json({ success: false, message: error?.message || "Failed to delete project" }, { status: 500 });
+        return NextResponse.json(
+            { success: false, error: { code: "PROJECT_DELETE_FAILED", message: "Failed to delete project" } },
+            { status: 500 }
+        );
     }
 }

@@ -213,6 +213,16 @@ export const documentApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ['Documents'],
         }),
+
+        updateDocumentAIGeneratedJSON: builder.mutation<{ success: boolean; data: any },
+            { documentId: string; updates?: Record<string, any> }>({
+                query: ({ documentId, updates }) => ({
+                    url: `/documents/${documentId}`,
+                    method: 'PUT',
+                    body: { ...(updates ? { updates } : {}) },
+                }),
+                invalidatesTags: ['Documents'],
+            }),
     }),
 });
 
@@ -228,5 +238,6 @@ export const {
     useBulkVerifyDocumentsMutation,
     useRejectDocumentMutation,
     useExportDocumentMutation,
-    useDeleteDocumentMutation
+    useDeleteDocumentMutation,
+    useUpdateDocumentAIGeneratedJSONMutation
 } = documentApi;

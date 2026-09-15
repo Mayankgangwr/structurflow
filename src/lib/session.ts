@@ -19,6 +19,10 @@ export interface AuthContext {
         activeOrganizationId?: string | null;
     };
     organizationId: string;
+    membership: {
+        id: string;
+        role: string;
+    };
 }
 
 export async function getAuthenticatedUserAndOrg(req: NextRequest): Promise<AuthContext> {
@@ -42,23 +46,38 @@ export async function getAuthenticatedUserAndOrg(req: NextRequest): Promise<Auth
         .from(member)
         .where(eq(member.userId, userId));
 
-    let resolvedOrgId: string | null = null;
+    let resolvedMembership: (typeof userMemberships)[number] | null = null;
 
-    if (headerOrgId && userMemberships.some((m) => m.organizationId === headerOrgId)) {
-        resolvedOrgId = headerOrgId;
-    } else if (sessionOrgId && userMemberships.some((m) => m.organizationId === sessionOrgId)) {
-        resolvedOrgId = sessionOrgId;
+    if (headerOrgId) {
+        resolvedMembership = userMemberships.find((membership) => membership.organizationId === headerOrgId) ?? null;
+    } else if (sessionOrgId) {
+        resolvedMembership = userMemberships.find((membership) => membership.organizationId === sessionOrgId) ?? null;
     } else if (userMemberships.length > 0) {
-        resolvedOrgId = userMemberships[0].organizationId;
+        resolvedMembership = userMemberships[0];
     }
 
-    if (!resolvedOrgId) {
+    if (!resolvedMembership) {
         throw new Error("ORGANIZATION_REQUIRED");
     }
 
     return {
-        user: session.user as any,
-        session: session.session as any,
-        organizationId: resolvedOrgId,
+        user: {
+            id: session.user.id,
+            email: session.user.email,
+            name: session.user.name,
+            firstName: session.user.firstName,
+            lastName: session.user.lastName,
+        },
+        session: {
+            id: session.session.id,
+            userId: session.session.userId,
+            token: session.session.token,
+            activeOrganizationId: session.session.activeOrganizationId,
+        },
+        organizationId: resolvedMembership.organizationId,
+        membership: {
+            id: resolvedMembership.id,
+            role: resolvedMembership.role,
+        },
     };
 }

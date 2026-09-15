@@ -1,15 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import { useAppSelector } from "@/store/hooks";
+import { useState, useEffect } from "react";
+import { authClient } from "@/lib/auth-client";
 import toast from "react-hot-toast";
 
 export const useProfileSettings = () => {
-    const user = useAppSelector((state) => state.auth.user);
+    const { data: session } = authClient.useSession();
+    const user = session?.user as any;
 
-    const [firstName, setFirstName] = useState(user?.firstName || "");
-    const [lastName, setLastName] = useState(user?.lastName || "");
-    const [email] = useState(user?.email || "");
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
+    const [email, setEmail] = useState("");
+
+    useEffect(() => {
+        if (user) {
+            const nameParts = (user.name || "").split(" ");
+            setFirstName(user.firstName || nameParts[0] || "");
+            setLastName(user.lastName || nameParts.slice(1).join(" ") || "");
+            setEmail(user.email || "");
+        }
+    }, [user]);
 
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
@@ -17,9 +27,9 @@ export const useProfileSettings = () => {
     const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-    const fullName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || "Workspace User";
-    const initials = user?.firstName
-        ? `${user.firstName[0]}${user.lastName ? user.lastName[0] : ""}`.toUpperCase()
+    const fullName = `${firstName || ""} ${lastName || ""}`.trim() || user?.name || "Workspace User";
+    const initials = firstName
+        ? `${firstName[0]}${lastName ? lastName[0] : ""}`.toUpperCase()
         : "S";
 
     const handleSaveProfile = async (e: React.FormEvent) => {

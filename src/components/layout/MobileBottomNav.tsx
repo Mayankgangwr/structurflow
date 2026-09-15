@@ -46,8 +46,7 @@ const MobileBottomNav: React.FC = () => {
 
     const { data: session } = authClient.useSession();
     const { data: activeMember } = authClient.useActiveMember();
-    const reduxUser = useAppSelector((state) => state.auth.user);
-    const user = (session?.user as any) || reduxUser;
+    const user = session?.user as any;
 
     const { data: projectsData } = useGetProjectsQuery();
     const pendingVerificationCount = projectsData?.data?.meta?.totalPendingVerification ?? 0;
@@ -120,6 +119,7 @@ const MobileBottomNav: React.FC = () => {
                     {/* 1. Dashboard */}
                     <Link
                         href="/dashboard"
+                        suppressHydrationWarning
                         className={cn(
                             "flex flex-col items-center justify-center transition-colors h-full pt-1",
                             currentSection === "dashboard"
@@ -134,6 +134,7 @@ const MobileBottomNav: React.FC = () => {
                     {/* 2. Projects */}
                     <Link
                         href="/project"
+                        suppressHydrationWarning
                         className={cn(
                             "flex flex-col items-center justify-center transition-colors h-full pt-1",
                             currentSection === "project"
@@ -148,6 +149,7 @@ const MobileBottomNav: React.FC = () => {
                     {/* 3. Verify */}
                     <Link
                         href="/verification"
+                        suppressHydrationWarning
                         className={cn(
                             "flex flex-col items-center justify-center transition-colors h-full pt-1 relative",
                             currentSection === "verification"
@@ -167,6 +169,7 @@ const MobileBottomNav: React.FC = () => {
                     {/* 4. Documents */}
                     <Link
                         href="/documents"
+                        suppressHydrationWarning
                         className={cn(
                             "flex flex-col items-center justify-center transition-colors h-full pt-1",
                             currentSection === "documents"
@@ -181,6 +184,7 @@ const MobileBottomNav: React.FC = () => {
                     {/* 5. More Operations Drawer Trigger */}
                     <button
                         onClick={() => setIsMoreDrawerOpen(true)}
+                        suppressHydrationWarning
                         className={cn(
                             "flex flex-col items-center justify-center transition-colors h-full pt-1 cursor-pointer",
                             isMoreActive || isMoreDrawerOpen

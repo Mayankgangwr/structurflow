@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useAppSelector } from "@/store/hooks";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import { useGetTeamMembersQuery } from "@/features/team/teamApi";
 import toast from "react-hot-toast";
 
 export const useOrganizationSettings = () => {
-    const activeOrgId = useAppSelector((state) => state.auth.activeOrganizationId);
-    const { role, can } = usePermissions();
+    const { role, can, activeOrganizationId: activeOrgId } = usePermissions();
     const { data: teamData, isLoading: isLoadingTeam } = useGetTeamMembersQuery();
 
     const [copiedOrgId, setCopiedOrgId] = useState(false);

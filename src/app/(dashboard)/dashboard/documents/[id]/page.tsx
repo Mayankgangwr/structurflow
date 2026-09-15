@@ -2,7 +2,6 @@
 
 import React, { use } from 'react';
 import { useGetDocumentByIdQuery } from '@/features/documents/documentApi';
-import { useAppSelector } from '@/store/hooks';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ArrowLeft, FileText, Loader2, History } from 'lucide-react';
@@ -12,7 +11,6 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
   // In Next.js 15, params is a promise
   const resolvedParams = use(params);
   const documentId = resolvedParams.id;
-  const activeOrganizationId = useAppSelector((state) => state.auth.activeOrganizationId);
 
   const { data, isLoading, isError } = useGetDocumentByIdQuery(
     documentId,
