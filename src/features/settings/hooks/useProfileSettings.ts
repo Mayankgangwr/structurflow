@@ -1,33 +1,38 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { authClient } from "@/lib/auth-client";
+import {
+    useGetProfileQuery,
+    useUpdateProfileMutation,
+    useChangePasswordMutation,
+} from "../settingsApi";
 import toast from "react-hot-toast";
 
 export const useProfileSettings = () => {
-    const { data: session } = authClient.useSession();
-    const user = session?.user as any;
+    const { data: profileRes, isLoading: isLoadingProfile } = useGetProfileQuery();
+    const [updateProfile, { isLoading: isSavingProfile }] = useUpdateProfileMutation();
+    const [changePassword, { isLoading: isChangingPassword }] = useChangePasswordMutation();
+
+    const profile = profileRes?.data;
 
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
     const [email, setEmail] = useState("");
 
     useEffect(() => {
-        if (user) {
-            const nameParts = (user.name || "").split(" ");
-            setFirstName(user.firstName || nameParts[0] || "");
-            setLastName(user.lastName || nameParts.slice(1).join(" ") || "");
-            setEmail(user.email || "");
+        if (profile) {
+            setFirstName(profile.firstName || "");
+            setLastName(profile.lastName || "");
+            setEmail(profile.email || "");
         }
-    }, [user]);
+    }, [profile]);
 
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [isSavingProfile, setIsSavingProfile] = useState(false);
-    const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-    const fullName = `${firstName || ""} ${lastName || ""}`.trim() || user?.name || "Workspace User";
+    const fullName =
+        `${firstName || ""} ${lastName || ""}`.trim() || profile?.name || "Workspace User";
     const initials = firstName
         ? `${firstName[0]}${lastName ? lastName[0] : ""}`.toUpperCase()
         : "S";
@@ -39,11 +44,15 @@ export const useProfileSettings = () => {
             return;
         }
 
-        setIsSavingProfile(true);
-        setTimeout(() => {
-            setIsSavingProfile(false);
+        try {
+            await updateProfile({
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+            }).unwrap();
             toast.success("Profile preferences saved successfully");
-        }, 400);
+        } catch (error: any) {
+            toast.error(error?.data?.message || "Failed to save profile preferences");
+        }
     };
 
     const handleChangePassword = async (e: React.FormEvent) => {
@@ -56,8 +65,15 @@ export const useProfileSettings = () => {
             toast.error("New password must be at least 8 characters");
             return;
         }
-        if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) {
-            toast.error("Password must include uppercase, lowercase, number, and special character");
+        if (
+            !/[A-Z]/.test(newPassword) ||
+            !/[a-z]/.test(newPassword) ||
+            !/[0-9]/.test(newPassword) ||
+            !/[^A-Za-z0-9]/.test(newPassword)
+        ) {
+            toast.error(
+                "Password must include uppercase, lowercase, number, and special character"
+            );
             return;
         }
         if (newPassword !== confirmPassword) {
@@ -65,18 +81,24 @@ export const useProfileSettings = () => {
             return;
         }
 
-        setIsChangingPassword(true);
-        setTimeout(() => {
-            setIsChangingPassword(false);
+        try {
+            await changePassword({
+                currentPassword,
+                newPassword,
+                confirmPassword,
+            }).unwrap();
             toast.success("Password updated successfully");
             setCurrentPassword("");
             setNewPassword("");
             setConfirmPassword("");
-        }, 500);
+        } catch (error: any) {
+            toast.error(error?.data?.message || "Failed to update password");
+        }
     };
 
     return {
-        user,
+        user: profile,
+        isLoadingProfile,
         fullName,
         initials,
         firstName,

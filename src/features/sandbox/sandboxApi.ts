@@ -1,14 +1,5 @@
 import { baseApi } from "@/services/baseApi";
 
-export interface SandboxPreset {
-    id: string;
-    name: string;
-    category: string;
-    description: string;
-    fields: string[];
-    sampleDocText?: string;
-}
-
 export interface SandboxTransformResponse {
     filename: string;
     pdfBase64: string;
@@ -18,24 +9,17 @@ export interface SandboxTransformResponse {
         documentName: string;
         templateName: string;
         fieldCount: number;
-        isPreset: boolean;
+        isPreset?: boolean;
     };
 }
 
 export interface SandboxTransformArgs {
     documentFile: File;
-    templateFile?: File | null;
-    presetId?: string;
+    templateFile: File;
 }
 
 export const sandboxApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
-        getSandboxPresets: builder.query<{ success: boolean; data: SandboxPreset[] }, void>({
-            query: () => ({
-                url: "/sandbox/presets",
-                method: "GET",
-            }),
-        }),
         transformSandboxDocument: builder.mutation<
             { success: boolean; message: string; data: SandboxTransformResponse },
             FormData
@@ -45,12 +29,10 @@ export const sandboxApi = baseApi.injectEndpoints({
                 method: "POST",
                 body: formData,
             }),
+            invalidatesTags: ["Sandbox"],
         }),
     }),
     overrideExisting: false,
 });
 
-export const {
-    useGetSandboxPresetsQuery,
-    useTransformSandboxDocumentMutation,
-} = sandboxApi;
+export const { useTransformSandboxDocumentMutation } = sandboxApi;

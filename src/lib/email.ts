@@ -108,3 +108,70 @@ export async function sendTeamInviteEmail({ to, inviterName, orgName, token }: {
         return { success: false, error: err?.message || "Failed to send email" };
     }
 }
+
+export async function sendSupportTicketEmail({
+    to,
+    ticketId,
+    subject: ticketSubject,
+    category,
+    priority,
+    message,
+    userName,
+}: {
+    to: string;
+    ticketId: string;
+    subject: string;
+    category: string;
+    priority: string;
+    message: string;
+    userName: string;
+}) {
+    const subject = `[Support Ticket #${ticketId}] ${ticketSubject}`;
+    const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; padding: 20px; border: 1px solid #eaeaea; border-radius: 12px;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h1 style="color: #4f46e5; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -1px;">StructurFlow</h1>
+      </div>
+      <h2 style="color: #111827; font-size: 18px; font-weight: 600;">Support Ticket Received #${ticketId}</h2>
+      <p style="color: #4b5563; font-size: 14px;">Hello <strong>${userName}</strong>,</p>
+      <p style="color: #4b5563; font-size: 14px;">We have received your support request and our engineering team has been notified. Here is a summary of your ticket:</p>
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+        <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Ticket ID:</strong> #${ticketId}</p>
+        <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Category:</strong> ${category}</p>
+        <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Priority:</strong> ${priority.toUpperCase()}</p>
+        <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Subject:</strong> ${ticketSubject}</p>
+        <p style="margin: 8px 0 0 0; font-size: 13px;"><strong>Details:</strong></p>
+        <p style="margin: 4px 0 0 0; font-size: 13px; color: #475569; white-space: pre-wrap;">${message}</p>
+      </div>
+      <p style="color: #64748b; font-size: 13px;">Our support engineers typically reply within 24 hours.</p>
+      <hr style="border: none; border-top: 1px solid #eaeaea; margin: 24px 0;">
+      <p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 0;">StructurFlow Support Desk</p>
+    </div>
+    `;
+
+    const text = `
+Support Ticket Received #${ticketId}
+
+Hello ${userName},
+
+We have received your support ticket #${ticketId} (${ticketSubject}).
+Category: ${category}
+Priority: ${priority.toUpperCase()}
+
+Message:
+${message}
+
+Our support team typically replies within 24 hours.
+
+StructurFlow Support Desk
+    `;
+
+    try {
+        await sendEmail({ to, subject, text, html });
+        return { success: true };
+    } catch (err: any) {
+        console.warn(`[SMTP NOTICE] Failed to send support ticket email:`, err?.message || err);
+        return { success: false, error: err?.message || "Failed to send email" };
+    }
+}
+

@@ -21,7 +21,8 @@ export type AuditAction =
     | "MEMBER_INVITED"
     | "MEMBER_ROLE_UPDATED"
     | "MEMBER_REMOVED"
-    | "INVITE_REVOKED";
+    | "INVITE_REVOKED"
+    | "SUPPORT_TICKET_CREATED";
 
 interface WriteAuditLogInput {
     organizationId: string;
