@@ -131,12 +131,29 @@ export const auth = betterAuth({
         }),
     ],
     secret: process.env.BETTER_AUTH_SECRET,
-    baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || (process.env.URL ? process.env.URL : "http://localhost:3000"),
+    baseURL: {
+        allowedHosts: [
+            "structurflow.netlify.app",
+            "structurflow.prep10x.in",
+            "*.netlify.app",
+            "*.prep10x.in",
+            "localhost:3000",
+            "127.0.0.1:3000",
+        ],
+        protocol: "auto",
+        fallback: process.env.NEXT_PUBLIC_APP_URL || process.env.BETTER_AUTH_URL || "https://structurflow.netlify.app",
+    },
     trustedOrigins: [
         "http://localhost:3000",
+        "https://structurflow.netlify.app",
+        "https://structurflow.prep10x.in",
+        "https://*.netlify.app",
+        "https://*.prep10x.in",
         process.env.NEXT_PUBLIC_APP_URL || "",
         process.env.BETTER_AUTH_URL || "",
         process.env.URL || "",
-        "https://*.netlify.app",
     ].filter(Boolean),
+    advanced: {
+        trustedProxyHeaders: true,
+    },
 });

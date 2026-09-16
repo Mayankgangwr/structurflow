@@ -49,9 +49,9 @@ async function sendEmail({ to, subject, text, html }: { to: string; subject: str
     return transporter.sendMail({ from: `"StructurFlow" <${fromAddress}>`, to, subject, text, html });
 }
 
-export async function sendResetPasswordEmail({ to, token }: { to: string; token: string }) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const resetLink = `${appUrl}/reset-password?token=${encodeURIComponent(token)}`;
+export async function sendResetPasswordEmail({ to, token, appUrl }: { to: string; token: string; appUrl?: string }) {
+    const base = appUrl || process.env.NEXT_PUBLIC_APP_URL || process.env.BETTER_AUTH_URL || "https://structurflow.netlify.app";
+    const resetLink = `${base}/reset-password?token=${encodeURIComponent(token)}`;
     await sendEmail({
         to,
         subject: "Reset your Structurflow password",
@@ -60,9 +60,9 @@ export async function sendResetPasswordEmail({ to, token }: { to: string; token:
     });
 }
 
-export async function sendTeamInviteEmail({ to, inviterName, orgName, token }: { to: string; inviterName: string; orgName: string; token: string }) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const inviteLink = `${appUrl}/accept-invite?token=${encodeURIComponent(token)}`;
+export async function sendTeamInviteEmail({ to, inviterName, orgName, token, appUrl }: { to: string; inviterName: string; orgName: string; token: string; appUrl?: string }) {
+    const base = appUrl || process.env.NEXT_PUBLIC_APP_URL || process.env.BETTER_AUTH_URL || "https://structurflow.netlify.app";
+    const inviteLink = `${base}/accept-invite?token=${encodeURIComponent(token)}`;
     const subject = `You've been invited to join ${orgName} on StructurFlow`;
 
     const html = `
