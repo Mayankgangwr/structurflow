@@ -4,7 +4,7 @@ import type { TemplateField, TemplateFieldType, TemplateSchemaDefinition } from 
 const apiKey = process.env.GEMINI_API_KEY;
 export const gemini = new GoogleGenAI({ apiKey: apiKey || "" });
 export { aiService } from "./services/ai.service";
-const models = ["gemini-2.5-flash", "gemini-flash-latest"];
+const models = ["gemini-3.1-pro", "gemini-3.8-flash"];
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", "\"": "&quot;" })[character] ?? character);
