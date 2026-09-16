@@ -12,10 +12,16 @@ const envSchema = z.object({
 
     FRONTEND_URL: z.string().url().default("http://localhost:3000"),
 
-    MONGO_URI: z.string().url(),
+    MONGO_URI: z.string().optional(),
+    MONGODB_URI: z.string().optional(),
+    MONGODB_USERNAME: z.string().optional(),
+    MONGODB_PASSWORD: z.string().optional(),
 
+    REDIS_URL: z.string().optional(),
     REDIS_HOST: z.string().default("localhost"),
     REDIS_PORT: z.string().default("6379"),
+    REDIS_USERNAME: z.string().default("default"),
+    REDIS_PASSWORD: z.string().optional(),
 
     JWT_ACCESS_SECRET: z.string().min(10),
     JWT_ACCESS_EXPIRES_IN: z.string().default('1h'),
@@ -54,11 +60,19 @@ if (!_env.success) {
     process.exit(1);
 }
 
+const resolvedMongoUri = _env.data.MONGODB_URI || _env.data.MONGO_URI;
+if (!resolvedMongoUri) {
+    console.error("Missing MongoDB URI: Please provide either MONGODB_URI or MONGO_URI in .env");
+    process.exit(1);
+}
+
 export const config = {
     ..._env.data,
+    MONGO_URI: resolvedMongoUri,
+    MONGODB_URI: resolvedMongoUri,
     JWT_ACCESS_EXPIRES_IN: _env.data.JWT_ACCESS_EXPIRES_IN as SignOptions["expiresIn"],
     JWT_REFRESH_EXPIRES_IN: _env.data.JWT_REFRESH_EXPIRES_IN as SignOptions["expiresIn"],
     isDevelopment: _env.data.NODE_ENV === 'development',
     isProduction: _env.data.NODE_ENV === "production",
     port: parseInt(_env.data.PORT, 10),
-}
+};

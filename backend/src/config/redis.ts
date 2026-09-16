@@ -5,13 +5,20 @@ class RedisService {
     public client: RedisClientType;
 
     constructor() {
-        this.client = createClient({
-            url: config.REDIS_HOST && config.REDIS_PORT ?
-                `redis://${config.REDIS_HOST}:${config.REDIS_PORT}` :
-                "redis://localhost:6379",
-        });
+        if (config.REDIS_URL) {
+            this.client = createClient({ url: config.REDIS_URL });
+        } else {
+            this.client = createClient({
+                username: config.REDIS_USERNAME || undefined,
+                password: config.REDIS_PASSWORD || undefined,
+                socket: {
+                    host: config.REDIS_HOST || "localhost",
+                    port: Number(config.REDIS_PORT) || 6379,
+                },
+            });
+        }
 
-        this.client.on("error", (err) => {
+        this.client.on("error", (err: any) => {
             console.error("Redis Client Error:", err);
         });
 

@@ -25,8 +25,12 @@ app.use(helmet());
 app.use(
     cors({
         origin: config.isDevelopment
-            ? "http://localhost:3000"
-            : (config.FRONTEND_URL || "https://www.structurflow.com"),
+            ? [
+                "http://localhost:3000",
+                "http://localhost:3001",
+                "http://localhost:3002",
+            ]
+            : (config.FRONTEND_URL || "https://structurflow.netlify.app"),
         credentials: true,
     })
 );

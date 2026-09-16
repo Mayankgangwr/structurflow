@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Inter, Geist } from "next/font/google";
 import "./globals.css";
 import StoreProvider from "@/store/StoreProvider";
+import { Toaster } from "react-hot-toast";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
@@ -20,6 +21,7 @@ const RootLayout: React.FC<LayoutProps<"/">> = ({ children }) => {
       <body className={`${inter.className} h-full bg-slate-50 text-slate-900 antialiased`}>
         <StoreProvider>
           {children}
+          <Toaster position="top-right" />
         </StoreProvider>
       </body>
     </html>
