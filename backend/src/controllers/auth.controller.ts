@@ -9,22 +9,26 @@ const setAccessTokenCookie = (res: Response, token: string) => {
     res.cookie('accessToken', token, {
         httpOnly: true,
         secure: config.isProduction,
-        sameSite: config.isProduction,
+        sameSite: config.isProduction ? 'none' : 'lax',
         maxAge: 60 * 60 * 1000, // 1 hour
-    })
-}
+    });
+};
 
 const setRefreshTokenCookie = (res: Response, token: string) => {
     res.cookie('refreshToken', token, {
         httpOnly: true,
         secure: config.isProduction,
-        sameSite: config.isProduction,
+        sameSite: config.isProduction ? 'none' : 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    })
-}
+    });
+};
 
 const clearTokenCookie = (res: Response, tokenName: "accessToken" | "refreshToken") => {
-    res.clearCookie(tokenName);
+    res.clearCookie(tokenName, {
+        httpOnly: true,
+        secure: config.isProduction,
+        sameSite: config.isProduction ? 'none' : 'lax',
+    });
 };
 
 export const authController = {

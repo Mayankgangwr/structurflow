@@ -20,17 +20,31 @@ import sandboxRoutes from "./routes/sandbox.routes";
 
 const app = express();
 
+// Trust reverse proxy (essential for Render / HTTPS / secure cookies / rate limiters)
+app.set("trust proxy", 1);
+
 // Security Middlewares
 app.use(helmet());
+
+const allowedOrigins = config.isDevelopment
+    ? ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
+    : config.FRONTEND_URL
+        ? config.FRONTEND_URL.split(",").map((url) => url.trim().replace(/\/$/, ""))
+        : ["https://structurflow.netlify.app"];
+
 app.use(
     cors({
-        origin: config.isDevelopment
-            ? [
-                "http://localhost:3000",
-                "http://localhost:3001",
-                "http://localhost:3002",
-            ]
-            : (config.FRONTEND_URL || "https://structurflow.netlify.app"),
+        origin: (origin, callback) => {
+            if (!origin) return callback(null, true);
+            if (
+                config.isDevelopment ||
+                allowedOrigins.includes(origin) ||
+                allowedOrigins.includes("*")
+            ) {
+                return callback(null, true);
+            }
+            callback(new Error(`CORS blocked for origin: ${origin}`));
+        },
         credentials: true,
     })
 );

@@ -10,7 +10,7 @@ const envSchema = z.object({
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     PORT: z.string().default('5000'),
 
-    FRONTEND_URL: z.string().url().default("http://localhost:3000"),
+    FRONTEND_URL: z.string().default("http://localhost:3000"),
 
     MONGO_URI: z.string().optional(),
     MONGODB_URI: z.string().optional(),
