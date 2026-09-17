@@ -67,6 +67,7 @@ class AuthService {
         if (emailTaken) throw ApiErrors.emailAlreadyExists();
 
         const passwordHash = await bcrypt.hash(pendingUser.password, 12);
+        let createdUser: any = null;
         try {
             const user = await userRepository.create({
                 email: pendingUser.email,
@@ -75,6 +76,7 @@ class AuthService {
                 lastName: pendingUser.lastName,
                 isEmailVerified: true
             });
+            createdUser = user;
 
             let organizationName = pendingUser.organizationName;
             let slug;
@@ -87,9 +89,16 @@ class AuthService {
                 slug = generateSlug(organizationName);
             }
 
+            // Ensure unique slug to prevent MongoServerError E11000 duplicate key
+            let uniqueSlug = slug;
+            while (await organizationRepository.slugExists(uniqueSlug)) {
+                const randomSuffix = crypto.randomBytes(2).toString("hex");
+                uniqueSlug = `${slug}-${randomSuffix}`;
+            }
+
             const organization = await organizationRepository.create({
                 name: organizationName,
-                slug,
+                slug: uniqueSlug,
             });
 
             const membership = await membershipRepository.create({
@@ -97,6 +106,9 @@ class AuthService {
                 organizationId: organization._id,
                 role: Role.OWNER,
             });
+
+            // Clean up verified pending token in Redis
+            await redis.del(`user_verify:${payload.token}`).catch(() => {});
 
             // Record Audit Log for USER_REGISTERED & Organization Initialization
             try {
@@ -121,6 +133,9 @@ class AuthService {
                 organization: { id: organization._id, name: organization.name }
             };
         } catch (error) {
+            if (createdUser?._id) {
+                await userRepository.deleteById(createdUser._id.toString()).catch(() => {});
+            }
             throw error;
         }
     }
