@@ -25,6 +25,34 @@ class MailService {
 
     async sendEmail(options: EmailOptions): Promise<void> {
         try {
+            if (config.BREVO_API_KEY) {
+                const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+                    method: "POST",
+                    headers: {
+                        "accept": "application/json",
+                        "api-key": config.BREVO_API_KEY,
+                        "content-type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        sender: {
+                            name: "StructurFlow",
+                            email: config.BREVO_SENDER_EMAIL || config.SMTP_FROM,
+                        },
+                        to: [{ email: options.to }],
+                        subject: options.subject,
+                        htmlContent: options.html,
+                        textContent: options.text,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error("Brevo API email failed:", errorData);
+                    throw new Error((errorData as any)?.message || `Brevo email error (${response.status})`);
+                }
+                return;
+            }
+
             const mailOptions = {
                 from: config.SMTP_FROM,
                 to: options.to,

@@ -40,6 +40,9 @@ const envSchema = z.object({
     SMTP_PASS: z.string().default("dnfgogbbjnhndnmv"),
     SMTP_FROM: z.string().default("iammayankgangwarbly@gmail.com"),
 
+    BREVO_API_KEY: z.string().optional(),
+    BREVO_SENDER_EMAIL: z.string().default("iammayankgangwarbly@gmail.com"),
+
     OTP_TTL_MINUTES: z.coerce.number().default(15),
     PENDING_SIGNUP_TTL_MINUTES: z.coerce.number().default(120),
     CLOUDINARY_CLOUD_NAME: z.string(),
