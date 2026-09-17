@@ -7,24 +7,8 @@ const protectedPaths = ['/dashboard', '/project', '/settings'];
 const authPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
 
 export function proxy(request: NextRequest) {
-    const { pathname } = request.nextUrl;
-
-    // We check for the refresh token cookie as the source of truth for "logged in" state
-    const hasRefreshToken = request.cookies.has('refreshToken');
-
-    // 1. If user is trying to access a protected route without a token
-    const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path));
-
-    if (isProtectedPath && !hasRefreshToken) {
-        return NextResponse.redirect(new URL('/login', request.url));
-    }
-
-    // 2. If user is trying to access auth pages (like /login) while already logged in
-    const isAuthPath = authPaths.some(path => pathname.startsWith(path));
-    if (isAuthPath && hasRefreshToken) {
-        return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
-
+    // Authentication is verified client-side by AuthGuard via useGetMeQuery
+    // because authentication cookies are scoped to the backend API domain on Render.
     return NextResponse.next();
 }
 
