@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import path from "path";
 
 import { config } from "./config/env";
+import { logger } from "./utils/logger";
 import { requestIdMiddleware } from "./middlewares/request-id.middleware";
 import { globalRateLimiter } from "./middlewares/rate-limit.middleware";
 import { globalErrorHandler, notFoundHandler } from "./middlewares/error.middleware";
@@ -24,28 +25,67 @@ const app = express();
 app.set("trust proxy", 1);
 
 // Security Middlewares
-app.use(helmet());
+app.use(
+    helmet({
+        crossOriginResourcePolicy: { policy: "cross-origin" },
+        crossOriginOpenerPolicy: false,
+    })
+);
 
-const allowedOrigins = config.isDevelopment
-    ? ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
-    : config.FRONTEND_URL
-        ? config.FRONTEND_URL.split(",").map((url) => url.trim().replace(/\/$/, ""))
-        : ["https://structurflow.netlify.app"];
+// Collect all allowed origins from environment variable (comma-separated or single)
+const configuredOrigins = config.FRONTEND_URL
+    ? config.FRONTEND_URL.split(",").map((url) => url.trim().replace(/\/$/, ""))
+    : [];
+
+// Determine whether incoming origin is permitted
+const isAllowedOrigin = (origin?: string): boolean => {
+    // Non-browser requests (Postman, curl, server-to-server)
+    if (!origin) return true;
+
+    // Localhost on any port (allows local dev testing against cloud backend)
+    if (/^https?:\/\/localhost(:\d+)?$/.test(origin) || /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) {
+        return true;
+    }
+
+    // Render, Netlify, and Vercel domains (frontend subdomains and preview branches)
+    if (
+        /^https:\/\/([a-zA-Z0-9-]+\.)?onrender\.com$/.test(origin) ||
+        /^https:\/\/([a-zA-Z0-9-]+\.)?netlify\.app$/.test(origin) ||
+        /^https:\/\/([a-zA-Z0-9-]+\.)?vercel\.app$/.test(origin)
+    ) {
+        return true;
+    }
+
+    // Configured FRONTEND_URL matches
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    if (configuredOrigins.some((allowed) => allowed === "*" || allowed === normalizedOrigin)) {
+        return true;
+    }
+
+    return false;
+};
 
 app.use(
     cors({
         origin: (origin, callback) => {
-            if (!origin) return callback(null, true);
-            if (
-                config.isDevelopment ||
-                allowedOrigins.includes(origin) ||
-                allowedOrigins.includes("*")
-            ) {
+            if (isAllowedOrigin(origin)) {
                 return callback(null, true);
             }
-            callback(new Error(`CORS blocked for origin: ${origin}`));
+            logger.warn(`[CORS] Request origin not in whitelist: ${origin}`);
+            return callback(null, false);
         },
         credentials: true,
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allowedHeaders: [
+            "Content-Type",
+            "Authorization",
+            "X-Organization-Id",
+            "X-Request-Id",
+            "Accept",
+            "Origin",
+            "Cookie",
+        ],
+        exposedHeaders: ["Set-Cookie"],
     })
 );
 
