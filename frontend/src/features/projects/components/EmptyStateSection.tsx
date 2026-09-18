@@ -14,7 +14,7 @@ const EmptyStateSection: React.FC<EmptyStateSectionProps> = ({ onOpenNewProject 
 
     return (
         <div className="flex-1 flex items-center justify-center border border-border-subtle border-dashed rounded-xl bg-surface/50 backdrop-blur-sm p-xxl min-h-[400px]" >
-            <div className="text-center flex flex-col items-center max-w-md">
+            <div className="text-center flex flex-col items-center max-w-full">
                 {/* Icon / Illustration */}
                 <div
                     className="h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
