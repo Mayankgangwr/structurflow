@@ -29,6 +29,7 @@ export class ValidationError extends DomainError { }       // 400
 export class ConflictError extends DomainError { }         // 409
 export class InternalError extends DomainError { }         // 500
 export class TooManyRequestsError extends DomainError { }  // 429
+export class ServiceUnavailableError extends DomainError { } // 503
 /**
  * Centralized error factory.
  * Every throwable error in the entire app is defined here.
@@ -85,6 +86,7 @@ export const ApiErrors = {
     // --- Generic ---
     notFound: (message = 'Resource not found', code = 'NOT_FOUND') => new EntityNotFoundError(message, [{ code, message }]),
     badRequest: (message: string, code = 'BAD_REQUEST') => new BadRequestError(message, [{ code, message }]),
+    serviceUnavailable: (message = 'The AI service is temporarily experiencing high demand. Please try again in a few moments.', code = 'SERVICE_UNAVAILABLE') => new ServiceUnavailableError(message, [{ code, message }]),
     missingRequiredField: (field: string) => new ValidationError(`${field} is required`, [{ field, code: 'REQUIRED_FIELD', message: `${field} is required.` }]),
     orgIdRequired: () => new ValidationError('Organization ID is required', [{ code: 'ORG_ID_REQUIRED', message: 'The X-Organization-Id header or orgId parameter is required.' }]),
 }

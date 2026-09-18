@@ -1,4 +1,6 @@
 import * as fs from "fs";
+import path from "path";
+import { pathToFileURL } from "url";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 
 // ==========================================
@@ -408,8 +410,18 @@ export const extractPdfElements = async (params: {
         pdfBuffer = fs.readFileSync(filePath);
     }
 
+    let standardFontDataUrl: string | undefined;
+    try {
+        standardFontDataUrl = pathToFileURL(
+            path.join(path.dirname(require.resolve("pdfjs-dist/package.json")), "standard_fonts/")
+        ).href;
+    } catch {
+        // Fallback gracefully if standard_fonts is not resolvable
+    }
+
     const pdf = await pdfjsLib.getDocument({
         data: new Uint8Array(pdfBuffer),
+        ...(standardFontDataUrl ? { standardFontDataUrl } : {}),
     }).promise;
 
     const allElements: ExtractedElement[] = [];

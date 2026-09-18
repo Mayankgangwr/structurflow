@@ -34,7 +34,7 @@ class MembershipRepository extends BaseRepository<IMembership> {
     return await this.model.findOneAndUpdate(
       { organizationId, userId },
       { role },
-      { new: true }
+      { returnDocument: 'after' }
     ).populate('userId', 'firstName lastName email avatar').lean();
   }
 

@@ -13,6 +13,7 @@ import {
   ValidationError,
   ConflictError,
   TooManyRequestsError,
+  ServiceUnavailableError,
 } from '@/utils/errors';
 
 export const globalErrorHandler = (
@@ -55,6 +56,7 @@ export const globalErrorHandler = (
     else if (err instanceof ValidationError) statusCode = 400;
     else if (err instanceof ConflictError) statusCode = 409;
     else if (err instanceof TooManyRequestsError) statusCode = 429;
+    else if (err instanceof ServiceUnavailableError) statusCode = 503;
 
     return fail(res, statusCode, err.message, err.details, err.data);
   }

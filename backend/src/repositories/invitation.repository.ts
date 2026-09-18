@@ -47,7 +47,7 @@ class InvitationRepository extends BaseRepository<IInvitation> {
                     status: InvitationStatus.PENDING,
                 },
                 { status: InvitationStatus.REVOKED },
-                { new: true }
+                { returnDocument: 'after' }
             )
             .exec();
     }
@@ -57,7 +57,7 @@ class InvitationRepository extends BaseRepository<IInvitation> {
             .findOneAndUpdate(
                 { token, status: InvitationStatus.PENDING },
                 { status: InvitationStatus.ACCEPTED },
-                { new: true }
+                { returnDocument: 'after' }
             )
             .exec();
     }

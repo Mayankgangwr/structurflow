@@ -1,4 +1,4 @@
-import { gemini } from "@/config/gemini";
+import { gemini, callGeminiWithRetryAndFallback } from "@/config/gemini";
 import { ITemplateField, ITemplateSchema } from "@/models/template.model";
 import { ExtractedPdfElements } from "@/utils/extractPdfElements";
 import { logger } from "@/utils/logger";
@@ -168,8 +168,8 @@ class AIService {
         });
 
         try {
-            const response = await gemini.models.generateContent({
-                model: "gemini-3.5-flash",
+            const response = await callGeminiWithRetryAndFallback({
+                model: "gemini-2.5-flash",
                 contents: [
                     {
                         role: "user",
@@ -300,7 +300,7 @@ class AIService {
         }));
 
         // 2. Call Gemini
-        const response = await gemini.models.generateContent({
+        const response = await callGeminiWithRetryAndFallback({
             model: "gemini-2.5-flash",
             contents: [
                 {

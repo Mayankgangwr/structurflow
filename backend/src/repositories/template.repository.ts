@@ -78,7 +78,7 @@ class TemplateRepository extends BaseRepository<ITemplate> {
         return await this.model.findOneAndUpdate(
             { _id: id, organizationId },
             { $set: { isDeleted: true } },
-            { new: true }
+            { returnDocument: 'after' }
         );
     }
 

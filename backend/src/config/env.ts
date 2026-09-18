@@ -54,6 +54,8 @@ const envSchema = z.object({
     SUPABASE_SECRET_KEY: z.string(),
 
     GEMINI_API_KEY: z.string().min(1),
+    GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
+    GEMINI_FALLBACK_MODELS: z.string().default("gemini-3.5-flash,gemini-2.5-flash-lite,gemini-2.5-pro"),
 });
 
 const _env = envSchema.safeParse(process.env);

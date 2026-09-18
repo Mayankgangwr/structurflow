@@ -120,7 +120,14 @@ class DocumentService {
             throw ApiErrors.badRequest("Document contains no extracted text to transform");
         }
 
-        const LLMResult = await pdfService.processPdfWithSchema(extractedData, schema.fields);
+        let LLMResult;
+        try {
+            LLMResult = await pdfService.processPdfWithSchema(extractedData, schema.fields);
+        } catch (error: any) {
+            logger.error(`Document processing failed for documentId=${documentId}:`, error);
+            if (error instanceof DomainError) throw error;
+            throw ApiErrors.serviceUnavailable(`Document transformation failed: ${error.message}`);
+        }
 
         await documentRepository.updateById(documentId, {
             status: DocumentStatus.TRANSFORMED,

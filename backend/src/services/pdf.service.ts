@@ -2,11 +2,13 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import fs from "fs/promises";
 import path from "path";
+import { pathToFileURL } from "url";
 import os from "os";
 import crypto from "crypto";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
-import { gemini } from "@/config/gemini";
+import { gemini, callGeminiWithRetryAndFallback } from "@/config/gemini";
 import { logger } from "@/utils/logger";
+import { DomainError } from "@/utils/errors";
 import generatePdfFromTemplate, { PdfTextElement, GeneratePdfOptions } from "@/utils/generatePdfFromTemplate";
 
 const execFileAsync = promisify(execFile);
@@ -107,9 +109,19 @@ class PdfService {
                 buffer = await fs.readFile(pdfSource);
             }
 
+            let standardFontDataUrl: string | undefined;
+            try {
+                standardFontDataUrl = pathToFileURL(
+                    path.join(path.dirname(require.resolve("pdfjs-dist/package.json")), "standard_fonts/")
+                ).href;
+            } catch {
+                // Ignore if resolution fails in any custom environment
+            }
+
             const pdf = await pdfjsLib.getDocument({
                 data: new Uint8Array(buffer),
                 useSystemFonts: true,
+                ...(standardFontDataUrl ? { standardFontDataUrl } : {}),
             }).promise;
 
             const textChunks: string[] = [];
@@ -151,7 +163,7 @@ class PdfService {
                 buffer = await fs.readFile(imageSource);
             }
 
-            const response = await gemini.models.generateContent({
+            const response = await callGeminiWithRetryAndFallback({
                 model: "gemini-2.5-flash",
                 contents: [
                     {
@@ -213,8 +225,8 @@ Instructions:
 4. If a field cannot be found, use null or an empty string as appropriate.
 `;
 
-            const response = await gemini.models.generateContent({
-                model: "gemini-3.5-flash",
+            const response = await callGeminiWithRetryAndFallback({
+                model: "gemini-2.5-flash",
                 contents: prompt,
                 config: {
                     temperature: 0.1,
@@ -225,10 +237,10 @@ Instructions:
             const responseText = response.text?.trim() || "{}";
 
             let cleanJson = responseText;
-            if (cleanJson.startsWith('\`\`\`json')) {
-                cleanJson = cleanJson.replace(/^\`\`\`json/, '').replace(/\`\`\`$/, '').trim();
-            } else if (cleanJson.startsWith('\`\`\`')) {
-                cleanJson = cleanJson.replace(/^\`\`\`/, '').replace(/\`\`\`$/, '').trim();
+            if (cleanJson.startsWith('```json')) {
+                cleanJson = cleanJson.replace(/^```json/, '').replace(/```$/, '').trim();
+            } else if (cleanJson.startsWith('```')) {
+                cleanJson = cleanJson.replace(/^```/, '').replace(/```$/, '').trim();
             }
 
             const parsedData = JSON.parse(cleanJson);
@@ -238,6 +250,9 @@ Instructions:
                 parsingIssues: []
             };
         } catch (error: any) {
+            if (error instanceof DomainError) {
+                throw error;
+            }
             throw new Error(`Failed to process PDF with schema: ${error.message}`);
         }
     }
