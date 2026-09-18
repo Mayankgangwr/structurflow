@@ -1,7 +1,11 @@
 import projectRepository, { ProjectQueryOptions } from "@/repositories/project.repository";
+import documentRepository from "@/repositories/document.repository";
+import templateRepository from "@/repositories/template.repository";
+import { storageService } from "@/integrations/storage.service";
 import auditLogRepository from "@/repositories/audit-log.repository";
 import { AuditAction } from "@/models/audit-log.model";
 import { ApiErrors } from "@/utils/errors";
+import { logger } from "@/utils/logger";
 import mongoose from "mongoose";
 
 class ProjectService {
@@ -72,6 +76,41 @@ class ProjectService {
         const project = await projectRepository.softDelete(id);
         if (!project) throw ApiErrors.projectNotFound();
 
+        // 1. Cascade soft-delete all related documents & templates
+        const [deletedDocsResult, deletedTemplatesResult] = await Promise.all([
+            documentRepository.softDeleteByProject(id, organizationId),
+            templateRepository.softDeleteByProject(id, organizationId),
+        ]);
+
+        logger.info(
+            `Project ${id} cascade deleted: ${deletedDocsResult.modifiedCount} documents, ${deletedTemplatesResult.modifiedCount} templates`
+        );
+
+        // 2. Asynchronously clean up storage files from Supabase Storage
+        (async () => {
+            try {
+                const [docs, templates] = await Promise.all([
+                    documentRepository.findByProject(id, organizationId),
+                    templateRepository.findByProject(id, organizationId),
+                ]);
+
+                for (const doc of docs) {
+                    if (doc.publicId) {
+                        storageService.deleteFile(doc.publicId).catch(() => {});
+                    }
+                }
+
+                for (const tmpl of templates) {
+                    if (tmpl.publicId) {
+                        storageService.deleteFile(tmpl.publicId).catch(() => {});
+                    }
+                }
+            } catch (storageErr) {
+                logger.warn(`Storage file cleanup error during cascade delete for project ${id}:`, storageErr);
+            }
+        })();
+
+        // 3. Record Audit Log
         if (organizationId && userId) {
             try {
                 await auditLogRepository.create({
@@ -82,6 +121,8 @@ class ProjectService {
                     details: {
                         projectName: project.name,
                         status: "DELETED",
+                        deletedDocumentsCount: deletedDocsResult.modifiedCount,
+                        deletedTemplatesCount: deletedTemplatesResult.modifiedCount,
                     },
                 });
             } catch (err) {

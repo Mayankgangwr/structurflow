@@ -105,7 +105,23 @@ class DocumentRepository extends BaseRepository<IDocument> {
     }
 
     async softDeleteById(documentId: string) {
-        return await this.model.findByIdAndUpdate(documentId, { isDeleted: true }, { new: true });
+        return await this.model.findByIdAndUpdate(documentId, { isDeleted: true }, { returnDocument: 'after' });
+    }
+
+    async softDeleteByProject(projectId: string, organizationId?: string) {
+        const filter: any = { projectId: new mongoose.Types.ObjectId(projectId) };
+        if (organizationId && mongoose.Types.ObjectId.isValid(organizationId)) {
+            filter.organizationId = new mongoose.Types.ObjectId(organizationId);
+        }
+        return await this.model.updateMany(filter, { $set: { isDeleted: true } });
+    }
+
+    async findByProject(projectId: string, organizationId?: string) {
+        const filter: any = { projectId: new mongoose.Types.ObjectId(projectId) };
+        if (organizationId && mongoose.Types.ObjectId.isValid(organizationId)) {
+            filter.organizationId = new mongoose.Types.ObjectId(organizationId);
+        }
+        return await this.model.find(filter);
     }
 
     async getSummaryByProject(projectId: string) {

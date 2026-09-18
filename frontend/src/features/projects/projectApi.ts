@@ -106,6 +106,8 @@ export const projectApi = baseApi.injectEndpoints({
                 invalidatesTags: (result, error, projectId) => [
                     'Projects',
                     { type: 'Projects', id: projectId },
+                    'Documents',
+                    'Templates',
                     'Analytics'
                 ]
             }

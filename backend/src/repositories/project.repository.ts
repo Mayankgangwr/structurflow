@@ -251,7 +251,7 @@ class ProjectRepository extends BaseRepository<IProject> {
         return await this.model.findByIdAndUpdate(
             projectId,
             { isDeleted: true },
-            { new: true }
+            { returnDocument: 'after' }
         );
     }
 
@@ -259,7 +259,7 @@ class ProjectRepository extends BaseRepository<IProject> {
         return await this.model.findByIdAndUpdate(
             projectId,
             { templateDocumentId },
-            { new: true }
+            { returnDocument: 'after' }
         );
     }
 }

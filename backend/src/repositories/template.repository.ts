@@ -82,6 +82,22 @@ class TemplateRepository extends BaseRepository<ITemplate> {
         );
     }
 
+    async softDeleteByProject(projectId: string, organizationId?: string) {
+        const filter: any = { projectId: new mongoose.Types.ObjectId(projectId) };
+        if (organizationId && mongoose.Types.ObjectId.isValid(organizationId)) {
+            filter.organizationId = new mongoose.Types.ObjectId(organizationId);
+        }
+        return await this.model.updateMany(filter, { $set: { isDeleted: true, isActive: false } });
+    }
+
+    async findByProject(projectId: string, organizationId?: string) {
+        const filter: any = { projectId: new mongoose.Types.ObjectId(projectId) };
+        if (organizationId && mongoose.Types.ObjectId.isValid(organizationId)) {
+            filter.organizationId = new mongoose.Types.ObjectId(organizationId);
+        }
+        return await this.model.find(filter);
+    }
+
     async countByOrgAndHash(organizationId: string, fileHash: string) {
         return this.model.countDocuments({ organizationId, fileHash, isDeleted: { $ne: true } })
     }
