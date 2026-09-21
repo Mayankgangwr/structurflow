@@ -80,4 +80,9 @@ export const config = {
     isDevelopment: _env.data.NODE_ENV === 'development',
     isProduction: _env.data.NODE_ENV === "production",
     port: parseInt(_env.data.PORT, 10),
+    // Supports comma-separated list of URLs; extracts the primary URL for emails & redirects
+    primaryFrontendUrl: (() => {
+        const first = (_env.data.FRONTEND_URL.split(",")[0] || "http://localhost:3000").trim().replace(/\/$/, "");
+        return /^https?:\/\//i.test(first) ? first : `https://${first}`;
+    })(),
 };

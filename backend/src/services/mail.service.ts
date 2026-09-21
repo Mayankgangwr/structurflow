@@ -71,21 +71,21 @@ class MailService {
     }
 
     async sendOtpEmail(to: string, otpCode: string, token: string) {
-        const verificationLink = `${config.FRONTEND_URL}/verify-email?token=${token}`;
+        const verificationLink = `${config.primaryFrontendUrl}/verify-email?token=${token}`;
         const { subject, html, text } = compileOtpEmail({ otpCode, verificationLink });
 
         await this.sendEmail({ to, subject, html, text });
     }
 
     async sendResetPasswordEmail(to: string, token: string) {
-        const resetLink = `${config.FRONTEND_URL}/reset-password?token=${token}`;
+        const resetLink = `${config.primaryFrontendUrl}/reset-password?token=${token}`;
         const { subject, html, text } = compileResetPasswordEmail({ resetLink });
 
         await this.sendEmail({ to, subject, html, text });
     }
 
     async sendTeamInviteEmail(to: string, inviterName: string, orgName: string, token: string) {
-        const inviteLink = `${config.FRONTEND_URL}/accept-invite?token=${token}`;
+        const inviteLink = `${config.primaryFrontendUrl}/accept-invite?token=${token}`;
         const { subject, html, text } = compileTeamInviteEmail({ inviterName, orgName, inviteLink });
 
         await this.sendEmail({ to, subject, html, text });
