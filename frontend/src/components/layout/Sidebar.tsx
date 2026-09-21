@@ -13,12 +13,14 @@ import {
     CircleHelp,
     Plus,
     PanelLeftClose,
-    PanelLeftOpen
+    PanelLeftOpen,
+    LogOut
 } from "lucide-react";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ProjectForm from "../../features/projects/components/ProjectForm";
+import LogoutConfirmationDialog from "@/features/auth/components/LogoutConfirmationDialog";
 import { useAppSelector } from "@/store/hooks";
 import { useGetProjectsQuery } from "@/features/projects/projectApi";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
@@ -34,6 +36,7 @@ const Sidebar: React.FC<SidebarProps> = () => {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isTablet, setIsTablet] = useState(false);
     const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
+    const [isLogoutOpen, setIsLogoutOpen] = useState(false);
 
     const { role, can } = usePermissions();
     const user = useAppSelector((state) => state.auth.user);
@@ -227,39 +230,54 @@ const Sidebar: React.FC<SidebarProps> = () => {
                         </button>
                     )}
 
-                    {/* User Profile */}
-                    <div className={`mt-1 flex items-center gap-2.5 py-1.5 bg-surface-container-lowest w-full rounded-md ${isCollapsed ? "justify-center px-0" : "px-2"}`}>
-                        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs border border-primary/20">
+                    {/* User Profile & Logout */}
+                    <div className={`mt-1 flex items-center gap-2 py-1.5 bg-surface-container-lowest w-full rounded-md ${isCollapsed ? "justify-center px-0" : "px-2"}`}>
+                        <div
+                            onClick={isCollapsed ? () => setIsLogoutOpen(true) : undefined}
+                            className={`h-9 w-9 shrink-0 overflow-hidden rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs border border-primary/20 ${isCollapsed ? "cursor-pointer hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors" : ""}`}
+                            title={isCollapsed ? "Click to Log Out" : undefined}
+                        >
                             {initials}
                         </div>
 
                         {!isCollapsed && (
-                            <div className="min-w-0 flex-1">
-                                <div className="flex items-center justify-between gap-1">
-                                    <p className="truncate font-label-md text-xs font-semibold text-text-primary">
-                                        {fullName}
+                            <>
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center justify-between gap-1">
+                                        <p className="truncate font-label-md text-xs font-semibold text-text-primary">
+                                            {fullName}
+                                        </p>
+                                        {role && (
+                                            <span className={cn(
+                                                "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded border shrink-0",
+                                                role === "OWNER" && "bg-amber-50 text-amber-700 border-amber-200",
+                                                role === "ADMIN" && "bg-blue-50 text-blue-700 border-blue-200",
+                                                role === "REVIEWER" && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                                role === "VIEWER" && "bg-slate-50 text-slate-600 border-slate-200"
+                                            )}>
+                                                {role}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="truncate text-[10px] text-secondary">
+                                        {email}
                                     </p>
-                                    {role && (
-                                        <span className={cn(
-                                            "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded border shrink-0",
-                                            role === "OWNER" && "bg-amber-50 text-amber-700 border-amber-200",
-                                            role === "ADMIN" && "bg-blue-50 text-blue-700 border-blue-200",
-                                            role === "REVIEWER" && "bg-emerald-50 text-emerald-700 border-emerald-200",
-                                            role === "VIEWER" && "bg-slate-50 text-slate-600 border-slate-200"
-                                        )}>
-                                            {role}
-                                        </span>
-                                    )}
                                 </div>
-                                <p className="truncate text-[10px] text-secondary">
-                                    {email}
-                                </p>
-                            </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsLogoutOpen(true)}
+                                    className="p-1.5 rounded-md text-secondary hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+                                    title="Log Out"
+                                >
+                                    <LogOut className="h-4 w-4" />
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>
             </div>
             <ProjectForm isOpen={isProjectFormOpen} onClose={() => setIsProjectFormOpen(false)} />
+            <LogoutConfirmationDialog isOpen={isLogoutOpen} onClose={() => setIsLogoutOpen(false)} />
         </div>
     );
 };
