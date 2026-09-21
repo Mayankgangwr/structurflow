@@ -1,0 +1,18 @@
+# ==============================================================================
+# Netlify Configuration for StructurFlow Frontend (Monorepo setup)
+# ==============================================================================
+
+[build]
+  # Monorepo directory containing the Next.js app
+  base = "frontend"
+  publish = ".next"
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NEXT_PUBLIC_API_URL = "https://structurflow-1.onrender.com/api/v1"
+  SECRETS_SCAN_ENABLED = "false"
+
+# Netlify Next.js Runtime (handles App Router, Server Components & /api/proxy-pdf)
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
