@@ -38,8 +38,10 @@ export interface VerificationWorkbenchModalProps {
     onPrevious: () => void;
     onNext: () => void;
     onApprove: (documentId: string, corrections?: Record<string, any>) => Promise<void>;
+    onSave: (documentId: string, modifiedFields: Record<string, any>) => Promise<void>;
     onReject: (documentId: string, reason?: string) => Promise<void>;
     isApproving?: boolean;
+    isSaving?: boolean;
     isRejecting?: boolean;
 }
 
@@ -52,12 +54,15 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
     onPrevious,
     onNext,
     onApprove,
+    onSave,
     onReject,
     isApproving = false,
+    isSaving = false,
     isRejecting = false,
 }) => {
     const { can } = usePermissions();
     const canVerify = can("verify_documents");
+    const canModify = can("modify_transformed_fields");
     const [activeTab, setActiveTab] = useState<"fields" | "preview" | "json">("fields");
     const [fieldSearch, setFieldSearch] = useState("");
     const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -135,6 +140,21 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
 
     const hasModifications = modifiedKeys.length > 0;
 
+    /**
+      *  Returns an object containing only the modified fields and their updated values.
+      */
+    const modifiedValues = React.useMemo(() => {
+        return Object.keys(editedValues).reduce((acc, key) => {
+            if (isFieldModified(key)) {
+                acc[key] = editedValues[key];
+            }
+
+            return acc;
+        },
+            {} as Partial<typeof editedValues>
+        );
+    }, [editedValues, extractedFields]);
+
     const handleValueChange = (key: string, val: string) => {
         setEditedValues((prev) => ({
             ...prev,
@@ -208,6 +228,13 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
             await onApprove(document._id, liveJsonData);
         } else {
             await onApprove(document._id);
+        }
+    };
+
+    const handleSaveAndNext = async () => {
+        if (!document) return;
+        if (hasModifications) {
+            await onSave(document._id, modifiedValues);
         }
     };
 
@@ -514,7 +541,7 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                                                     </div>
 
                                                     {/* Interactive Editable Field Input */}
-                                                    {canVerify ? (
+                                                    {canModify ? (
                                                         currentValue.length > 80 || currentValue.includes("\n") ? (
                                                             <textarea
                                                                 value={currentValue}
@@ -561,7 +588,7 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                                         <p className="text-xs">Rendering transformed output preview...</p>
                                     </div>
                                 ) : transformedPdfUrl ? (
-                                    <div className="w-full h-full min-h-[500px] rounded-lg overflow-hidden border border-slate-200 bg-white">
+                                    <div className="w-full h-full min-h-125 rounded-lg overflow-hidden border border-slate-200 bg-white">
                                         <PdfViewer
                                             src={transformedPdfUrl}
                                             title="Transformed PDF Preview"
@@ -606,7 +633,7 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                             <Button
                                 variant="outline"
                                 size="sm"
-                                disabled={isRejecting || isApproving}
+                                disabled={isRejecting || isApproving || isSaving}
                                 onClick={() => setIsRejectDialogOpen(true)}
                                 className="text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 text-xs font-semibold cursor-pointer h-9 px-3"
                             >
@@ -617,7 +644,7 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                             <Button
                                 variant="outline"
                                 size="sm"
-                                disabled={isReprocessing || isApproving}
+                                disabled={isReprocessing || isApproving || isSaving}
                                 onClick={handleReprocess}
                                 className="text-slate-600 border-slate-200 hover:bg-slate-100 text-xs font-semibold cursor-pointer h-9 px-3"
                                 title="Re-run AI extraction pipeline"
@@ -642,8 +669,35 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                             Close
                         </Button>
 
+                        {activeTab === "fields" && canModify && (
+                            <Button
+                                size="sm"
+                                disabled={isSaving || !hasModifications}
+                                onClick={handleSaveAndNext}
+                                className={cn(
+                                    "text-white text-xs font-semibold h-9 px-4 rounded-lg shadow-sm cursor-pointer flex items-center gap-1.5 transition-all",
+                                    hasModifications
+                                        ? "bg-emerald-700 hover:bg-emerald-800"
+                                        : "bg-emerald-500 hover:bg-emerald-600"
+                                )}
+                            >
+                                {isSaving ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span>Saving...</span>
+                                    </>
+                                ) : (
+                                    <span>
+                                        {canModify && currentIndex < totalInQueue - 1
+                                            ? "Save & Next"
+                                            : "Save & Finish"}
+                                    </span>
+                                )}
+                            </Button>
+                        )}
                         {/* APPROVE & NEXT Primary Action (gated for operators) */}
-                        {canVerify && (
+
+                        {activeTab !== "fields" && canVerify && (
                             <Button
                                 size="sm"
                                 disabled={isApproving || isRejecting}
@@ -669,13 +723,15 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                                                     ? "Approve with Corrections & Next"
                                                     : "Approve with Corrections & Finish"
                                                 : currentIndex < totalInQueue - 1
-                                                ? "Approve & Next"
-                                                : "Approve & Finish"}
+                                                    ? "Approve & Next"
+                                                    : "Approve & Finish"}
                                         </span>
                                     </>
                                 )}
                             </Button>
                         )}
+
+
                     </div>
                 </div>
             </Dialog>

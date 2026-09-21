@@ -7,6 +7,7 @@ import {
     useVerifyDocumentMutation,
     useBulkVerifyDocumentsMutation,
     useRejectDocumentMutation,
+    useUpdateTransformedFieldsMutation,
 } from "@/features/documents/documentApi";
 import { useGetProjectsQuery } from "@/features/projects/projectApi";
 import { DataTablePagination } from "@/components/ui/data-table/DataTablePagination";
@@ -84,6 +85,7 @@ const VerificationWorkspace: React.FC = () => {
     }));
 
     const [verifyDocumentMutation, { isLoading: isSingleVerifying }] = useVerifyDocumentMutation();
+    const [updateTransformedFieldsMutation, { isLoading: isFieldsUpdating }] = useUpdateTransformedFieldsMutation();
     const [bulkVerifyMutation, { isLoading: isBulkVerifying }] = useBulkVerifyDocumentsMutation();
     const [rejectDocumentMutation, { isLoading: isRejectingMutation }] = useRejectDocumentMutation();
 
@@ -244,6 +246,32 @@ const VerificationWorkspace: React.FC = () => {
             toast.error(err?.data?.message || "Failed to verify document");
         }
     };
+
+    // Workbench save & next progression flow
+    const handlehandleWorkbenchSave = async (documentId: string, corrections: Record<string, any>) => {
+        try {
+            await updateTransformedFieldsMutation({
+                documentId,
+                updates: corrections
+            }).unwrap();
+            toast.success("Document saved with corrections");
+
+            // Advance to next document if available
+            if (workbenchState.currentIndex < documents.length - 1) {
+                const nextIdx = workbenchState.currentIndex + 1;
+                setWorkbenchState({
+                    isOpen: true,
+                    currentIndex: nextIdx,
+                    document: documents[nextIdx],
+                });
+            } else {
+                toast.success("All items in current page reviewed!");
+                setWorkbenchState({ isOpen: false, currentIndex: 0, document: null });
+            }
+        } catch (err: any) {
+            toast.error(err?.data?.message || "Failed to saving document");
+        }
+    }
 
     const handleWorkbenchReject = async (documentId: string, reason?: string) => {
         try {
@@ -458,8 +486,10 @@ const VerificationWorkspace: React.FC = () => {
                     onPrevious={handleWorkbenchPrevious}
                     onNext={handleWorkbenchNext}
                     onApprove={handleWorkbenchApprove}
+                    onSave={handlehandleWorkbenchSave}
                     onReject={handleWorkbenchReject}
                     isApproving={isSingleVerifying}
+                    isSaving={isFieldsUpdating}
                     isRejecting={isRejectingMutation}
                 />
             )}

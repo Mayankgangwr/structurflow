@@ -28,6 +28,13 @@ documentRoutes.put('/verify/:id', requireRole(Role.OWNER, Role.ADMIN, Role.REVIE
 documentRoutes.post('/bulk-verify', requireRole(Role.OWNER, Role.ADMIN, Role.REVIEWER), documentController.bulkVerify);
 documentRoutes.put('/reject/:id', requireRole(Role.OWNER, Role.ADMIN, Role.REVIEWER), documentController.reject);
 
+// Update transformed fields value (restricted to OWNER, ADMIN, REVIEWER)
+documentRoutes.put('/update-transformed-fields/:id',
+    requireRole(Role.OWNER, Role.ADMIN, Role.REVIEWER),
+    documentController.updateTransformedDocumentFields // Fixed method reference
+);
+
+
 // Delete document (restricted to OWNER, ADMIN)
 documentRoutes.delete('/:id', requireRole(Role.OWNER, Role.ADMIN), documentController.delete);
 

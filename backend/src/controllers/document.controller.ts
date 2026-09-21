@@ -66,6 +66,26 @@ export const documentController = {
         return ok(res, result, "Document verified successfully");
     }),
 
+    updateTransformedDocumentFields: asyncHandler(async (req: Request, res: Response) => {
+        const documentId = (req.params.id || req.body.documentId) as string;
+        const organizationId = req.headers['x-organization-id'] as string;
+        const { updates } = req.body;
+
+        if (!documentId) throw ApiErrors.missingRequiredField('documentId');
+        if (!organizationId) throw ApiErrors.missingRequiredField('organizationId');
+        if (!updates) throw ApiErrors.missingRequiredField('updates');
+
+        const ip = req.ip || req.socket.remoteAddress;
+        const result = await documentService.updateTransformedDocumentFields(
+            documentId,
+            organizationId,
+            updates,
+            req.user?._id,
+            ip
+        );
+        return ok(res, result, "Document transformed fields updated successfully");
+    }),
+
     bulkVerify: asyncHandler(async (req: Request, res: Response) => {
         const { documentIds } = req.body;
         const organizationId = req.headers['x-organization-id'] as string;

@@ -73,7 +73,7 @@ const VerificationToolbar: React.FC<VerificationToolbarProps> = ({
         projects?.find((p) => p.id === selectedProjectId)?.name || "All Projects";
 
     return (
-        <div className="bg-surface p-2.5 sm:p-3 rounded-xl border border-border-subtle shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+        <div className="bg-surface p-2.5 sm:p-3 rounded-xl border border-border-subtle shadow-xs flex flex-row items-center justify-between gap-2.5">
             {/* Left: Search Box & Bulk Actions */}
             <div className="flex items-center gap-2 flex-1 min-w-0">
                 <div className="relative flex-1 min-w-0 max-w-full sm:max-w-72">
@@ -198,7 +198,7 @@ const VerificationToolbar: React.FC<VerificationToolbarProps> = ({
                     <span className="hidden sm:inline">
                         {sortOrder === "asc" ? "Oldest First (FIFO)" : "Newest First"}
                     </span>
-                    <span className="sm:hidden text-[11px] font-semibold">
+                    <span className="xxs:hidden text-[11px] font-semibold">
                         {sortOrder === "asc" ? "FIFO" : "LIFO"}
                     </span>
                 </Button>

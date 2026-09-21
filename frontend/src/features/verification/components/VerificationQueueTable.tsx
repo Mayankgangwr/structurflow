@@ -90,35 +90,35 @@ const VerificationQueueTable: React.FC<VerificationQueueTableProps> = ({
     const columns: DataTableColumn<Document>[] = [
         ...(canVerify
             ? [
-                  {
-                      id: "select",
-                      header: (
-                          <div className="flex items-center justify-center">
-                              <input
-                                  type="checkbox"
-                                  checked={isAllSelected}
-                                  ref={(el) => {
-                                      if (el) el.indeterminate = isSomeSelected;
-                                  }}
-                                  onChange={onToggleSelectAll}
-                                  className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 cursor-pointer"
-                                  title="Select all documents on this page"
-                              />
-                          </div>
-                      ),
-                      className: "w-10 text-center px-3",
-                      cell: (doc: Document) => (
-                          <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                  type="checkbox"
-                                  checked={selectedIds.has(doc._id)}
-                                  onChange={() => onToggleSelect(doc._id)}
-                                  className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 cursor-pointer"
-                              />
-                          </div>
-                      ),
-                  } as DataTableColumn<Document>,
-              ]
+                {
+                    id: "select",
+                    header: (
+                        <div className="flex items-center justify-center">
+                            <input
+                                type="checkbox"
+                                checked={isAllSelected}
+                                ref={(el) => {
+                                    if (el) el.indeterminate = isSomeSelected;
+                                }}
+                                onChange={onToggleSelectAll}
+                                className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 cursor-pointer"
+                                title="Select all documents on this page"
+                            />
+                        </div>
+                    ),
+                    className: "w-10 text-center px-3",
+                    cell: (doc: Document) => (
+                        <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.has(doc._id)}
+                                onChange={() => onToggleSelect(doc._id)}
+                                className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 cursor-pointer"
+                            />
+                        </div>
+                    ),
+                } as DataTableColumn<Document>,
+            ]
             : []),
         {
             id: "document",

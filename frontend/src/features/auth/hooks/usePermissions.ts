@@ -12,6 +12,7 @@ export type AppPermission =
     | "upload_documents"
     | "delete_documents"
     | "verify_documents"
+    | "modify_transformed_fields"
     | "export_documents"
     | "view_reports";
 
@@ -27,6 +28,7 @@ const ROLE_PERMISSIONS: Record<RoleType, AppPermission[]> = {
         "manage_templates",
         "upload_documents",
         "delete_documents",
+        "modify_transformed_fields",
         "verify_documents",
         "export_documents",
         "view_reports",
@@ -39,11 +41,13 @@ const ROLE_PERMISSIONS: Record<RoleType, AppPermission[]> = {
         "manage_templates",
         "upload_documents",
         "delete_documents",
+        "modify_transformed_fields",
         "verify_documents",
         "export_documents",
         "view_reports",
     ],
     REVIEWER: [
+        "modify_transformed_fields",
         "verify_documents",
         "export_documents",
         "view_reports",

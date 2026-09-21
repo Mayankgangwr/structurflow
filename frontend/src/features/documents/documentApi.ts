@@ -179,6 +179,15 @@ export const documentApi = baseApi.injectEndpoints({
             invalidatesTags: ['Documents'],
         }),
 
+        updateTransformedFields: builder.mutation<{ success: boolean; data: any }, { documentId: string; updates: Record<string, any> }>({
+            query: ({ documentId, updates }) => ({
+                url: `/documents/update-transformed-fields/${documentId}`,
+                method: 'PUT',
+                body: { updates },
+            }),
+            invalidatesTags: ['Documents'],
+        }),
+
         processDocument: builder.mutation<{ success: boolean; data: any }, { documentId: string }>({
             query: ({ documentId }) => ({
                 url: `/documents/process`,
@@ -225,6 +234,7 @@ export const {
     useUploadDocumentMutation,
     useProcessDocumentMutation,
     useVerifyDocumentMutation,
+    useUpdateTransformedFieldsMutation,
     useBulkVerifyDocumentsMutation,
     useRejectDocumentMutation,
     useExportDocumentMutation,

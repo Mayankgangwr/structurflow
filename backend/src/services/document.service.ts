@@ -253,6 +253,122 @@ class DocumentService {
         return uploadResult.secure_url;
     }
 
+    async updateTransformedDocumentFields(
+        documentId: string,
+        organizationId: string,
+        updates: Record<string, any>,
+        userId?: string,
+        ipAddress?: string
+    ) {
+        // 1. Validate Input
+        if (!updates || typeof updates !== "object" || Object.keys(updates).length === 0) {
+            throw ApiErrors.badRequest("Updates payload must be a non-empty object.");
+        }
+
+        // 2. Fetch Document
+        const document = await documentRepository.findByIdAndOrg(documentId, organizationId);
+        if (!document) throw ApiErrors.documentNotFound();
+
+        if (document.status === DocumentStatus.UPLOADED) {
+            throw ApiErrors.badRequest("Document has not been transformed yet. Please process the document first.");
+        }
+
+        const currentProcessingDetails = (document.processingDetails as Record<string, any>) || {};
+        const currentAiResponse = currentProcessingDetails.aiResponse || {};
+        const currentAiData = currentAiResponse.data;
+
+        // 3. Update AI Field Data (Supports both array of objects and flat dictionary)
+        let updatedAiData: any;
+
+        if (Array.isArray(currentAiData)) {
+            const matchedKeys = new Set<string>();
+            updatedAiData = currentAiData.map((field: any) => {
+                const key =
+                    field?.fieldName ||
+                    field?.name ||
+                    field?.key ||
+                    (field?.placeholder ? String(field.placeholder).replace(/^\{\{|\}\}$/g, "").trim() : "");
+
+                if (key && updates[key] !== undefined) {
+                    matchedKeys.add(key);
+                    return {
+                        ...field,
+                        originalValue: updates[key],
+                        value: String(updates[key]),
+                    };
+                }
+                return field;
+            });
+
+            // Append any newly added fields not present in original template
+            for (const [key, val] of Object.entries(updates)) {
+                if (!matchedKeys.has(key)) {
+                    updatedAiData.push({
+                        fieldName: key,
+                        label: key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+                        type: typeof val === "number" ? "number" : "string",
+                        required: false,
+                        placeholder: `{{${key}}}`,
+                        originalValue: val,
+                        value: String(val),
+                    });
+                }
+            }
+        } else if (currentAiData && typeof currentAiData === "object") {
+            updatedAiData = { ...currentAiData, ...updates };
+        } else {
+            updatedAiData = { ...updates };
+        }
+
+        // 4. Invalidate stale preview/verified PDF so changes reflect immediately in future previews
+        const { secureUrl, publicId, ...cleanProcessingDetails } = currentProcessingDetails;
+
+        const updatedProcessingDetails = {
+            ...cleanProcessingDetails,
+            aiResponse: {
+                ...currentAiResponse,
+                data: updatedAiData,
+            },
+        };
+
+        // 5. Update Database (reset status to TRANSFORMED if it was VERIFIED so it requires re-verification)
+        const updatedDoc = await documentRepository.updateById(documentId, {
+            processingDetails: updatedProcessingDetails,
+            ...(document.status === DocumentStatus.VERIFIED ? { status: DocumentStatus.TRANSFORMED } : {}),
+        });
+
+        // 6. Safe Audit Logging (Does not blow up DB size; does not block mutation on error)
+        try {
+            const actorId =
+                userId && mongoose.Types.ObjectId.isValid(userId)
+                    ? new mongoose.Types.ObjectId(userId)
+                    : (document.uploadedById as mongoose.Types.ObjectId);
+
+            await auditLogRepository.create({
+                organizationId: new mongoose.Types.ObjectId(organizationId),
+                actorId,
+                documentId: document._id as mongoose.Types.ObjectId,
+                projectId: document.projectId as mongoose.Types.ObjectId,
+                action: AuditAction.DOCUMENT_UPDATE_TRANSFORM_FIELDS,
+                details: {
+                    filename: document.originalFileName,
+                    updatedFieldsCount: Object.keys(updates).length,
+                    updatedFields: Object.keys(updates),
+                },
+                ipAddress,
+            });
+        } catch (auditErr) {
+            logger.warn(`Failed to create audit log for DOCUMENT_UPDATE_TRANSFORM_FIELDS:`, auditErr);
+        }
+
+        // 7. Return the updated data payload so frontend can update state directly
+        return {
+            documentId,
+            data: updatedAiData,
+            status: updatedDoc?.status || document.status,
+        };
+    }
+
     async getTransformedDocumentPreview(documentId: string, organizationId: string) {
         const document = await documentRepository.findByIdAndOrg(documentId, organizationId);
         if (!document) throw ApiErrors.documentNotFound();
@@ -383,8 +499,8 @@ class DocumentService {
             action: status === DocumentStatus.EXPORTED
                 ? AuditAction.DOCUMENT_STATUS_CHANGED
                 : status === DocumentStatus.VERIFIED
-                ? AuditAction.DOCUMENT_VERIFIED
-                : AuditAction.DOCUMENT_REJECTED,
+                    ? AuditAction.DOCUMENT_VERIFIED
+                    : AuditAction.DOCUMENT_REJECTED,
             details: {
                 filename: document.originalFileName,
                 originalFileName: document.originalFileName,

@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "lint": "eslint src/",
     "test": "jest",
-    "clean:data": "tsx src/scripts/clean-docs-and-templates.ts"
+    "clean:data": "tsx src/scripts/clean-docs-and-templates.ts",
+    "clean:deleted-projects": "tsx src/scripts/clean-deleted-projects-data.ts"
   },
   "keywords": [],
   "author": "",
