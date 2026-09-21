@@ -34,7 +34,15 @@ app.use(
 
 // Collect all allowed origins from environment variable (comma-separated or single)
 const configuredOrigins = config.FRONTEND_URL
-    ? config.FRONTEND_URL.split(",").map((url) => url.trim().replace(/\/$/, ""))
+    ? config.FRONTEND_URL.split(",").flatMap((url) => {
+        const trimmed = url.trim().replace(/\/$/, "");
+        if (!trimmed) return [];
+        if (/^https?:\/\//i.test(trimmed)) {
+            return [trimmed];
+        }
+        // Automatically support both https and http if protocol was omitted (e.g. structurflow.prep10x.in)
+        return [`https://${trimmed}`, `http://${trimmed}`];
+    })
     : [];
 
 // Determine whether incoming origin is permitted
@@ -47,11 +55,12 @@ const isAllowedOrigin = (origin?: string): boolean => {
         return true;
     }
 
-    // Render, Netlify, and Vercel domains (frontend subdomains and preview branches)
+    // Render, Netlify, Vercel, and Prep10x domains (subdomains and custom domains)
     if (
-        /^https:\/\/([a-zA-Z0-9-]+\.)?onrender\.com$/.test(origin) ||
-        /^https:\/\/([a-zA-Z0-9-]+\.)?netlify\.app$/.test(origin) ||
-        /^https:\/\/([a-zA-Z0-9-]+\.)?vercel\.app$/.test(origin)
+        /^https:\/\/([a-zA-Z0-9-_]+\.)*onrender\.com$/.test(origin) ||
+        /^https:\/\/([a-zA-Z0-9-_]+\.)*netlify\.app$/.test(origin) ||
+        /^https:\/\/([a-zA-Z0-9-_]+\.)*vercel\.app$/.test(origin) ||
+        /^https?:\/\/([a-zA-Z0-9-_]+\.)*prep10x\.in$/.test(origin)
     ) {
         return true;
     }

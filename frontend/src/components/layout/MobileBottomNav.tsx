@@ -16,10 +16,12 @@ import {
     X,
     ChevronRight,
     ShieldCheck,
+    LogOut,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ProjectForm from "../../features/projects/components/ProjectForm";
+import LogoutConfirmationDialog from "@/features/auth/components/LogoutConfirmationDialog";
 import { useGetProjectsQuery } from "@/features/projects/projectApi";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import { useAppSelector } from "@/store/hooks";
@@ -30,6 +32,7 @@ const MobileBottomNav: React.FC = () => {
     const currentSection = pathname.split("/")[1] || "dashboard";
     const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
     const [isMoreDrawerOpen, setIsMoreDrawerOpen] = useState(false);
+    const [isLogoutOpen, setIsLogoutOpen] = useState(false);
 
     const { role, can } = usePermissions();
     const canCreateProject = can("create_project");
@@ -300,6 +303,27 @@ const MobileBottomNav: React.FC = () => {
                                 </div>
                                 <ChevronRight className="w-4 h-4 text-slate-300" />
                             </Link>
+
+                            {/* Log Out Option in Drawer */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsMoreDrawerOpen(false);
+                                    setIsLogoutOpen(true);
+                                }}
+                                className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-rose-50 text-rose-600 transition-all cursor-pointer text-left"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-lg bg-rose-100/70 text-rose-600 flex items-center justify-center">
+                                        <LogOut className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold leading-none">Log Out</p>
+                                        <p className="text-[11px] text-rose-400 mt-0.5">Sign out of your session</p>
+                                    </div>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-rose-300" />
+                            </button>
                         </div>
 
                         {/* User Profile Card at Bottom of Drawer */}
@@ -318,12 +342,24 @@ const MobileBottomNav: React.FC = () => {
                                 </div>
                                 <p className="text-[11px] text-slate-400 truncate">{email}</p>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsMoreDrawerOpen(false);
+                                    setIsLogoutOpen(true);
+                                }}
+                                className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+                                title="Log Out"
+                            >
+                                <LogOut className="w-4 h-4" />
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
 
             <ProjectForm isOpen={isProjectFormOpen} onClose={() => setIsProjectFormOpen(false)} />
+            <LogoutConfirmationDialog isOpen={isLogoutOpen} onClose={() => setIsLogoutOpen(false)} />
         </>
     );
 };
