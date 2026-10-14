@@ -85,7 +85,7 @@ export const SandboxWorkspace: React.FC = () => {
                 {isTransforming ? (
                     /* In-flight Processing Overlay Stepper */
                     <div className="flex-1 flex flex-col items-center justify-center py-20 px-4">
-                        <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200/90 shadow-lg p-6 sm:p-8 flex flex-col items-center text-center">
+                        <div className="w-full max-w-120 bg-white rounded-2xl border border-slate-200/90 shadow-lg p-6 sm:p-8 flex flex-col items-center text-center">
                             <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-primary mb-5 shadow-xs">
                                 <Loader2 className="w-7 h-7 animate-spin text-primary" />
                             </div>
@@ -93,18 +93,17 @@ export const SandboxWorkspace: React.FC = () => {
                             <h3 className="text-lg font-bold text-slate-900">
                                 Transforming Document
                             </h3>
-                            <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xs">
+                            <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-85">
                                 Running in volatile memory with zero database persistence...
                             </p>
 
                             {/* Stepper Progress */}
                             <div className="w-full mt-6 space-y-3">
                                 <div
-                                    className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
-                                        processingStep >= 1
-                                            ? "bg-indigo-50/80 border-indigo-200 text-indigo-900"
-                                            : "bg-slate-50 border-slate-200 text-slate-400"
-                                    }`}
+                                    className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${processingStep >= 1
+                                        ? "bg-indigo-50/80 border-indigo-200 text-indigo-900"
+                                        : "bg-slate-50 border-slate-200 text-slate-400"
+                                        }`}
                                 >
                                     <div className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
                                         1
@@ -120,16 +119,14 @@ export const SandboxWorkspace: React.FC = () => {
                                 </div>
 
                                 <div
-                                    className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
-                                        processingStep >= 2
-                                            ? "bg-purple-50/80 border-purple-200 text-purple-900"
-                                            : "bg-slate-50 border-slate-200 text-slate-400"
-                                    }`}
+                                    className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${processingStep >= 2
+                                        ? "bg-purple-50/80 border-purple-200 text-purple-900"
+                                        : "bg-slate-50 border-slate-200 text-slate-400"
+                                        }`}
                                 >
                                     <div
-                                        className={`w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center shrink-0 ${
-                                            processingStep >= 2 ? "bg-purple-600" : "bg-slate-300"
-                                        }`}
+                                        className={`w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center shrink-0 ${processingStep >= 2 ? "bg-purple-600" : "bg-slate-300"
+                                            }`}
                                     >
                                         2
                                     </div>
@@ -144,16 +141,14 @@ export const SandboxWorkspace: React.FC = () => {
                                 </div>
 
                                 <div
-                                    className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
-                                        processingStep >= 3
-                                            ? "bg-emerald-50/80 border-emerald-200 text-emerald-900"
-                                            : "bg-slate-50 border-slate-200 text-slate-400"
-                                    }`}
+                                    className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${processingStep >= 3
+                                        ? "bg-emerald-50/80 border-emerald-200 text-emerald-900"
+                                        : "bg-slate-50 border-slate-200 text-slate-400"
+                                        }`}
                                 >
                                     <div
-                                        className={`w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center shrink-0 ${
-                                            processingStep >= 3 ? "bg-emerald-600" : "bg-slate-300"
-                                        }`}
+                                        className={`w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center shrink-0 ${processingStep >= 3 ? "bg-emerald-600" : "bg-slate-300"
+                                            }`}
                                     >
                                         3
                                     </div>

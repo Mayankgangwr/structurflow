@@ -500,7 +500,7 @@ const VerificationWorkspace: React.FC = () => {
                     open={!!rejectingDoc}
                     onClose={() => setRejectingDoc(null)}
                     title="Reject Document"
-                    className="max-w-md"
+                    className="max-w-[480px]"
                     footer={
                         <div className="flex justify-end gap-2">
                             <Button

@@ -91,7 +91,7 @@ export const RegisterForm: React.FC = () => {
                     </button>
                 </div>
 
-                <div className="flex justify-between items-start gap-3 w-full">
+                <div className="flex flex-col xxs:flex-row justify-between items-start gap-3 w-full">
                     <div className="w-full space-y-1">
                         <Label htmlFor="firstName" className="text-zinc-600 dark:text-zinc-300 ml-1">First Name</Label>
                         <Input

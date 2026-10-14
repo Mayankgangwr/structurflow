@@ -56,9 +56,9 @@ export const DataTablePagination: React.FC<DataTablePaginationProps> = ({
     };
 
     return (
-        <div className="mt-4 flex flex-row items-center justify-between gap-2 px-1 sm:px-2 text-xs sm:text-sm text-secondary">
+        <div className="mt-4 flex flex-col xs:flex-row items-center justify-between gap-2.5 px-1 sm:px-2 text-xs sm:text-sm text-secondary">
             {/* Result count */}
-            <p className="text-xs sm:text-sm text-secondary shrink-0">
+            <p className="text-xs sm:text-sm text-secondary shrink-0 self-start xs:self-auto">
                 Showing{" "}
                 <span className="font-semibold text-text-primary">
                     {startItem}-{endItem}
@@ -69,7 +69,7 @@ export const DataTablePagination: React.FC<DataTablePaginationProps> = ({
                 </span>
             </p>
 
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 self-end xs:self-auto">
                 {/* Page size */}
                 {onPageSizeChange && (
                     <select

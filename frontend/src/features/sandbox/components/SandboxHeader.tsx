@@ -41,7 +41,8 @@ export const SandboxHeader: React.FC = () => {
                     </Link>
                     <Link href="/register">
                         <Button size="sm" className="text-xs bg-slate-900 hover:bg-slate-800 text-white font-semibold gap-1.5 shadow-xs">
-                            <span>Create Free Workspace</span>
+                            <span className="hidden xxs:inline">Create Free Workspace</span>
+                            <span className="xxs:hidden">Sign Up</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                         </Button>
                     </Link>

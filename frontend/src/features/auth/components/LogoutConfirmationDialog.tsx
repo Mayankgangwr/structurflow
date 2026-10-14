@@ -59,7 +59,7 @@ export const LogoutConfirmationDialog: React.FC<LogoutConfirmationDialogProps> =
             onClose={onClose}
             showCloseButton={!isLoading}
             size="sm"
-            className="sm:max-w-md"
+            className="sm:max-w-[440px]"
             footer={
                 <div className="flex items-center justify-end gap-2.5 w-full">
                     <Button

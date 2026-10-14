@@ -135,9 +135,9 @@ const AnalyticsWorkspace: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                     <div className="flex items-center gap-2.5 flex-wrap">
-                        <h1 className="font-headline-md text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                            <BarChart3 className="w-6 h-6 text-primary" />
-                            Analytics & Performance Intelligence
+                        <h1 className="font-headline-md text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                            <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
+                            <span>Analytics & Performance Intelligence</span>
                         </h1>
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/80">
                             <Shield className="w-3.5 h-3.5" />
