@@ -16,11 +16,11 @@ interface DialogProps {
 }
 
 const sizeClasses = {
-  sm: "w-[100vw]",
-  md: "w-[90vw] max-w-[680px]",
-  lg: "w-[90vw] max-w-[720px]",
-  xl: "w-[90vw] max-w-[1024px]",
-  pdf: "w-[94vw] max-w-[720px]",
+  sm: "w-[92vw] max-w-[480px]",
+  md: "w-[92vw] sm:w-[90vw] max-w-[680px]",
+  lg: "w-[92vw] sm:w-[90vw] max-w-[720px]",
+  xl: "w-[94vw] sm:w-[90vw] max-w-[1024px]",
+  pdf: "w-[96vw] sm:w-[94vw] max-w-[720px]",
 };
 
 export function Dialog({

@@ -33,7 +33,7 @@ const DashboardKPIs: React.FC<DashboardKPIsProps> = ({
     isLoading,
 }) => {
     return (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+        <div className="grid grid-cols-1 xxs:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
             {/* 1. Total Ingestion Volume */}
             <div className="p-4 rounded-xl bg-white border border-slate-200/80 shadow-xs flex flex-col justify-between hover:shadow-md hover:border-slate-300 transition-all">
                 <div className="flex items-start justify-between gap-2">

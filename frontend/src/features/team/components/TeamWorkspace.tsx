@@ -158,7 +158,7 @@ const TeamWorkspace: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                     <div className="flex items-center gap-2.5 flex-wrap">
-                        <h1 className="font-headline-md text-2xl font-bold text-slate-900 tracking-tight">
+                        <h1 className="font-headline-md text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
                             Team & Access Management
                         </h1>
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/80">
@@ -229,7 +229,7 @@ const TeamWorkspace: React.FC = () => {
 
                 {/* Right: Search & Role Filter (when on members tab) */}
                 {activeTab === "members" && (
-                    <div className="flex items-center gap-2 flex-1 sm:flex-initial justify-end">
+                    <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 flex-1 sm:flex-initial justify-end w-full sm:w-auto">
                         <div className="relative flex-1 sm:w-64">
                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
                             <input

@@ -265,27 +265,27 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                 open={isOpen}
                 onClose={onClose}
                 size="xl"
-                className="max-w-[96vw] sm:max-w-7xl w-full"
+                className="max-w-[98vw] sm:max-w-7xl w-full"
                 title=""
-                contentClassName="p-0 overflow-hidden flex flex-col h-[92vh] mx-auto rounded-2xl bg-white border border-slate-200/80 shadow-2xl"
+                contentClassName="p-0 overflow-hidden flex flex-col h-[94vh] sm:h-[92vh] mx-auto rounded-xl sm:rounded-2xl bg-white border border-slate-200/80 shadow-2xl"
             >
                 {/* Header Bar */}
-                <div className="px-5 py-3.5 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
-                            <FileText className="w-5 h-5" />
+                <div className="px-3 sm:px-5 py-2.5 sm:py-3.5 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between shrink-0 gap-2">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
+                            <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
                         <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <h2 className="font-semibold text-slate-900 text-sm sm:text-base leading-tight truncate max-w-md" title={fileName}>
+                            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                <h2 className="font-semibold text-slate-900 text-xs sm:text-base leading-tight truncate max-w-[130px] xxs:max-w-[180px] xs:max-w-xs sm:max-w-md" title={fileName}>
                                     {fileName}
                                 </h2>
-                                <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-slate-200/70 text-slate-700 px-2 py-0.5 rounded-md">
-                                    <Folder className="w-3 h-3 text-slate-400" />
-                                    <span className="truncate max-w-36">{projectName}</span>
+                                <span className="hidden xxs:inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium bg-slate-200/70 text-slate-700 px-1.5 sm:px-2 py-0.5 rounded-md">
+                                    <Folder className="w-3 h-3 text-slate-400 shrink-0" />
+                                    <span className="truncate max-w-28 sm:max-w-36">{projectName}</span>
                                 </span>
                             </div>
-                            <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
+                            <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 flex items-center gap-1.5 sm:gap-2">
                                 <span>{getFileType(document.mimeType, fileName)}</span>
                                 <span>•</span>
                                 <span>{formatSize(document.sizeBytes)}</span>
@@ -344,11 +344,11 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                     </div>
                 </div>
 
-                {/* Main Dual-Pane Body */}
-                <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 min-h-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-200 overflow-hidden">
+                {/* Main Dual-Pane Body: Stacked & scrollable on mobile (< lg), side-by-side fixed on desktop (lg+) */}
+                <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 min-h-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-200 overflow-y-auto lg:overflow-hidden">
                     {/* LEFT PANE: Original Document Viewer */}
-                    <div className="flex flex-col h-full overflow-hidden bg-slate-100/50">
-                        <div className="px-4 py-2 border-b border-slate-200 bg-white/70 flex items-center justify-between text-xs text-slate-500 shrink-0">
+                    <div className="flex flex-col h-[300px] sm:h-[380px] lg:h-full shrink-0 lg:shrink overflow-hidden bg-slate-100/50">
+                        <div className="px-3 sm:px-4 py-2 border-b border-slate-200 bg-white/70 flex items-center justify-between text-xs text-slate-500 shrink-0">
                             <span className="font-semibold text-slate-700">Source Document</span>
                             <span className="text-[11px] text-slate-400">High-resolution viewer</span>
                         </div>
@@ -388,9 +388,9 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                     </div>
 
                     {/* RIGHT PANE: Extracted Schema, Form & Output */}
-                    <div className="flex flex-col h-full overflow-hidden bg-white">
+                    <div className="flex flex-col min-h-[360px] lg:h-full lg:overflow-hidden bg-white">
                         {/* Tab Switcher */}
-                        <div className="px-4 py-2 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between gap-2 shrink-0">
+                        <div className="px-3 sm:px-4 py-2 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between gap-2 shrink-0 overflow-x-auto">
                             <div className="flex items-center gap-1 p-0.5 bg-slate-200/60 rounded-lg">
                                 <button
                                     onClick={() => setActiveTab("fields")}
@@ -622,20 +622,20 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                 </div>
 
                 {/* Footer Action Bar */}
-                <div className="px-5 py-3 border-t border-slate-200 bg-slate-50/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+                <div className="px-3 sm:px-5 py-2.5 sm:py-3 border-t border-slate-200 bg-slate-50/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 shrink-0">
                     {!canVerify ? (
                         <div className="flex items-center gap-2 text-xs font-medium text-slate-600 bg-slate-100/90 border border-slate-200 px-3 py-1.5 rounded-lg">
                             <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
                             <span>Auditor Mode (Read-Only Access)</span>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
                             <Button
                                 variant="outline"
                                 size="sm"
                                 disabled={isRejecting || isApproving || isSaving}
                                 onClick={() => setIsRejectDialogOpen(true)}
-                                className="text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 text-xs font-semibold cursor-pointer h-9 px-3"
+                                className="flex-1 sm:flex-initial text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 text-xs font-semibold cursor-pointer h-9 px-3"
                             >
                                 <X className="w-4 h-4 mr-1" />
                                 Reject Document
@@ -646,7 +646,7 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                                 size="sm"
                                 disabled={isReprocessing || isApproving || isSaving}
                                 onClick={handleReprocess}
-                                className="text-slate-600 border-slate-200 hover:bg-slate-100 text-xs font-semibold cursor-pointer h-9 px-3"
+                                className="flex-1 sm:flex-initial text-slate-600 border-slate-200 hover:bg-slate-100 text-xs font-semibold cursor-pointer h-9 px-3"
                                 title="Re-run AI extraction pipeline"
                             >
                                 {isReprocessing ? (
@@ -659,7 +659,7 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                         </div>
                     )}
 
-                    <div className="flex items-center gap-2 justify-end">
+                    <div className="flex items-center gap-2 justify-end w-full sm:w-auto">
                         <Button
                             variant="outline"
                             size="sm"
@@ -742,7 +742,7 @@ const VerificationWorkbenchModal: React.FC<VerificationWorkbenchModalProps> = ({
                     open={isRejectDialogOpen}
                     onClose={() => setIsRejectDialogOpen(false)}
                     title="Reject Document"
-                    className="max-w-md"
+                    className="max-w-[480px]"
                     footer={
                         <div className="flex justify-end gap-2">
                             <Button

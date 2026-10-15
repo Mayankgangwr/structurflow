@@ -29,8 +29,8 @@ export default function Home() {
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <Link href="/sandbox">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <Link href="/sandbox" className="hidden sm:block">
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -70,7 +70,7 @@ export default function Home() {
                     <span>New: Zero-Retention Instant Sandbox Mode</span>
                 </div>
 
-                <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white max-w-3xl leading-[1.15]">
+                <h1 className="text-3xl xxs:text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-white max-w-3xl leading-[1.15]">
                     Transform Unstructured Docs Into Structured PDFs{" "}
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-sky-300 to-emerald-400">
                         In Seconds.
@@ -83,15 +83,15 @@ export default function Home() {
                 </p>
 
                 {/* Primary Action Buttons */}
-                <div className="mt-10 flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full sm:w-auto">
                     <Link href="/sandbox" className="w-full sm:w-auto">
                         <Button
                             size="lg"
-                            className="w-full sm:w-auto px-8 py-6 font-bold text-base bg-gradient-to-r from-indigo-600 via-indigo-500 to-primary hover:from-indigo-500 hover:to-indigo-600 text-white shadow-lg shadow-indigo-600/30 gap-2 cursor-pointer hover:-translate-y-0.5 transition-all"
+                            className="w-full sm:w-auto px-5 sm:px-8 py-3.5 sm:py-6 font-bold text-sm sm:text-base bg-gradient-to-r from-indigo-600 via-indigo-500 to-primary hover:from-indigo-500 hover:to-indigo-600 text-white shadow-lg shadow-indigo-600/30 gap-2 cursor-pointer hover:-translate-y-0.5 transition-all"
                         >
-                            <Zap className="w-5 h-5 text-amber-300 fill-amber-300" />
+                            <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 fill-amber-300 shrink-0" />
                             <span>Try Without Login (Instant Sandbox)</span>
-                            <ArrowRight className="w-4 h-4" />
+                            <ArrowRight className="w-4 h-4 shrink-0" />
                         </Button>
                     </Link>
 
@@ -99,7 +99,7 @@ export default function Home() {
                         <Button
                             size="lg"
                             variant="outline"
-                            className="w-full sm:w-auto px-8 py-6 font-semibold text-base border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-200 hover:text-white gap-2 cursor-pointer"
+                            className="w-full sm:w-auto px-5 sm:px-8 py-3.5 sm:py-6 font-semibold text-sm sm:text-base border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-200 hover:text-white gap-2 cursor-pointer"
                         >
                             <span>Create Free Workspace</span>
                         </Button>

@@ -77,7 +77,7 @@ const VerificationKPIHeader: React.FC<VerificationKPIHeaderProps> = ({
     ];
 
     return (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+        <div className="grid grid-cols-1 xxs:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
             {cards.map((card) => {
                 const Icon = card.icon;
                 const isSelected = activeFilter === card.filter;

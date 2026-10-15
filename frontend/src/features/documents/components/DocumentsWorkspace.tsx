@@ -507,7 +507,7 @@ const DocumentsWorkspace: React.FC = () => {
             {/* Delete Confirmation Dialog */}
             {deletingDocument && (
                 <Dialog
-                    className="max-w-md"
+                    className="max-w-[480px]"
                     open={!!deletingDocument}
                     onClose={() => !isDeleting && setDeletingDocument(null)}
                     title="Delete Document"

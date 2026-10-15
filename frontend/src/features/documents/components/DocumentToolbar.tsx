@@ -69,9 +69,9 @@ const DocumentToolbar: React.FC<DocumentToolbarProps> = ({
         projects?.find((p) => p.id === selectedProjectId)?.name || "All Projects";
 
     return (
-        <div className="bg-surface p-2.5 sm:p-3 rounded-xl border border-border-subtle shadow-xs flex flex-row items-center justify-between gap-2 mb-2">
-            {/* Search Box - Flex-1 so it takes available space */}
-            <div className="relative flex-1 min-w-0 lg:max-w-80">
+        <div className="bg-surface p-2.5 sm:p-3 rounded-xl border border-border-subtle shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 mb-2">
+            {/* Search Box - Full width on mobile, max-w-80 on desktop */}
+            <div className="relative w-full sm:flex-1 sm:max-w-80">
                 <Search className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 text-secondary w-4 h-4 shrink-0" />
                 <input
                     value={searchQuery}
@@ -92,7 +92,7 @@ const DocumentToolbar: React.FC<DocumentToolbarProps> = ({
             </div>
 
             {/* Filter Controls & View Switcher */}
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap sm:flex-nowrap justify-end">
                 {/* Optional Project Filter Dropdown */}
                 {projects && projects.length > 0 && (
                     <DropdownMenu>

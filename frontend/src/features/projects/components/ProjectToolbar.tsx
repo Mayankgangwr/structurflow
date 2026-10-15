@@ -35,9 +35,9 @@ const ProjectToolbar: React.FC<ProjectToolbarProps> = ({
     onResetFilters
 }) => {
     return (
-        <div className="bg-surface p-2.5 sm:p-3 rounded-xl border border-border-subtle shadow-xs mb-6 flex flex-row items-center justify-between gap-2">
-            {/* Search Box - Flex-1 so it occupies available space on same row */}
-            <div className="relative flex-1 min-w-0 lg:max-w-96">
+        <div className="bg-surface p-2.5 sm:p-3 rounded-xl border border-border-subtle shadow-xs mb-6 flex flex-col xs:flex-row items-stretch xs:items-center justify-between gap-2">
+            {/* Search Box - Full width on xxs, flex-1 on xs+ */}
+            <div className="relative w-full xs:flex-1 xs:max-w-96">
                 <Search className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 text-secondary w-4 h-4 shrink-0" />
                 <input
                     value={searchQuery}
@@ -58,7 +58,7 @@ const ProjectToolbar: React.FC<ProjectToolbarProps> = ({
             </div>
 
             {/* Filter Controls & View Switcher - Single row on mobile with icon-only buttons */}
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 justify-end">
                 {/* Status Filter Dropdown (Icon only on mobile, label on sm+) */}
                 <DropdownMenu>
                     <DropdownMenuTrigger
